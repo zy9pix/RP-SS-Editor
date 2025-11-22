@@ -13,7 +13,9 @@ import {
   X,
   Crop as CropIcon,
   Check,
-  Save
+  Italic,
+  EyeOff,
+  Palette
 } from "lucide-react";
 
 // --- Constants & Config ---
@@ -32,6 +34,14 @@ const PRESET_COLORS = {
   phone: "#4caf50", 
   ooc: "#a0a0a0" 
 };
+
+const DEFAULT_CUSTOM_COLORS = [
+  "#FF0000", // Red
+  "#00FF00", // Green
+  "#0000FF", // Blue
+  "#FFFF00", // Yellow
+  "#FF00FF"  // Magenta
+];
 
 const FONT_OPTIONS = [
   { name: "Helvetica", value: "Helvetica" },
@@ -83,18 +93,70 @@ const parseChatLog = (text: string): ChatLine[] => {
   });
 };
 
+// Helper to insert text at cursor in textarea
+const insertAtCursor = (input: HTMLTextAreaElement, prefix: string, suffix: string) => {
+  const start = input.selectionStart;
+  const end = input.selectionEnd;
+  const text = input.value;
+  const before = text.substring(0, start);
+  const selection = text.substring(start, end);
+  const after = text.substring(end);
+
+  const newText = before + prefix + selection + suffix + after;
+  
+  // Return new value and new cursor position
+  return {
+    text: newText,
+    cursorPos: start + prefix.length + selection.length + suffix.length
+  };
+};
+
+// Helper to generate offsets for text-shadow style outline
+const getShadowOffsets = (width: number) => {
+  if (width <= 0) return [];
+  const offsets: {x: number, y: number}[] = [];
+  
+  // Generate layers for every pixel step up to width to create a solid fill
+  const layers = [];
+  for (let r = 1; r <= Math.floor(width); r++) {
+    layers.push(r);
+  }
+  // Add partial step if needed (e.g. width 1.5 -> adds 1.5)
+  if (width % 1 !== 0) {
+    layers.push(width);
+  }
+
+  // For each layer, add 8 directions
+  layers.forEach(r => {
+     offsets.push({x: -r, y: -r});
+     offsets.push({x: 0, y: -r});
+     offsets.push({x: r, y: -r});
+     offsets.push({x: -r, y: 0});
+     offsets.push({x: r, y: 0});
+     offsets.push({x: -r, y: 1});
+     offsets.push({x: 0, y: 1});
+     offsets.push({x: r, y: 1});
+  });
+
+  return offsets;
+};
+
 // --- Main Component ---
 
 const App = () => {
   // State
   const [apiKey, setApiKey] = useState<string>("");
   const [originalImage, setOriginalImage] = useState<string | null>(null);
-  const [processedImage, setProcessedImage] = useState<string | null>(null); // The 1000px cropped version
+  const [processedImage, setProcessedImage] = useState<string | null>(null); 
   const [isProcessing, setIsProcessing] = useState(false);
   const [statusMsg, setStatusMsg] = useState("");
 
   // Settings Modal State
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
+  // Resolution Settings
+  const [targetWidth, setTargetWidth] = useState<number | "">(1000);
+  const [targetHeight, setTargetHeight] = useState<number | "">("");
 
   // Manual Crop State
   const [isManualCropping, setIsManualCropping] = useState(false);
@@ -105,13 +167,16 @@ const App = () => {
   const [chatInput, setChatInput] = useState("");
   const [chatLines, setChatLines] = useState<ChatLine[]>([]);
   const [overlayPos, setOverlayPos] = useState({ x: 20, y: 20 });
+  const chatInputRef = useRef<HTMLTextAreaElement>(null);
   
-  // Style State (Defaults will be overwritten by localStorage if present)
+  // Style State 
   const [fontSize, setFontSize] = useState(15); 
   const [lineHeight, setLineHeight] = useState(18);
-  const [strokeWidth, setStrokeWidth] = useState(3); 
+  const [strokeWidth, setStrokeWidth] = useState(1); // Outline width
+  const [textBackground, setTextBackground] = useState(false); // Black background box
   const [fontFamily, setFontFamily] = useState("Helvetica");
   const [fontBold, setFontBold] = useState(true); 
+  const [customColors, setCustomColors] = useState<string[]>(DEFAULT_CUSTOM_COLORS);
 
   // Export State
   const [exportFormat, setExportFormat] = useState<"png" | "jpeg" | "webp">("png");
@@ -143,17 +208,34 @@ const App = () => {
         if (config.lineHeight) setLineHeight(config.lineHeight);
         if (config.fontFamily) setFontFamily(config.fontFamily);
         if (config.fontBold !== undefined) setFontBold(config.fontBold);
+        if (config.strokeWidth !== undefined) setStrokeWidth(config.strokeWidth);
+        if (config.textBackground !== undefined) setTextBackground(config.textBackground);
+        if (config.targetWidth !== undefined) setTargetWidth(config.targetWidth);
+        if (config.targetHeight !== undefined) setTargetHeight(config.targetHeight);
+        if (config.customColors) setCustomColors(config.customColors);
+        if (config.exportFormat) setExportFormat(config.exportFormat);
       } catch (e) {
         console.error("Error loading config", e);
       }
     }
   }, []);
 
-  // Save settings whenever they change
+  // Save settings
   useEffect(() => {
-    const config = { fontSize, lineHeight, fontFamily, fontBold };
+    const config = { 
+      fontSize, 
+      lineHeight, 
+      fontFamily, 
+      fontBold, 
+      strokeWidth, 
+      textBackground, 
+      targetWidth, 
+      targetHeight, 
+      customColors,
+      exportFormat 
+    };
     localStorage.setItem("rp-editor-config", JSON.stringify(config));
-  }, [fontSize, lineHeight, fontFamily, fontBold]);
+  }, [fontSize, lineHeight, fontFamily, fontBold, strokeWidth, textBackground, targetWidth, targetHeight, customColors, exportFormat]);
 
   const saveApiKey = (key: string) => {
     setApiKey(key);
@@ -178,7 +260,6 @@ const App = () => {
           setStatusMsg("Image pasted from clipboard.");
         }
       } else if (item.type === "text/plain") {
-        // If user is typing in a specific input, don't hijack
         if (
           document.activeElement?.tagName === "INPUT" || 
           document.activeElement?.tagName === "TEXTAREA"
@@ -263,6 +344,39 @@ const App = () => {
      }
   };
 
+  // --- Formatting Toolbar Handler ---
+  const applyFormat = (type: 'emote' | 'italic' | 'redact' | 'color', colorHex?: string) => {
+    if (!chatInputRef.current) return;
+    
+    let prefix = "";
+    let suffix = "";
+
+    if (type === 'emote') { prefix = "*"; suffix = "*"; }
+    if (type === 'italic') { prefix = "/"; suffix = "/"; }
+    if (type === 'redact') { prefix = "||"; suffix = "||"; }
+    if (type === 'color' && colorHex) { prefix = `[${colorHex}]`; suffix = "[/#]"; }
+
+    const { text, cursorPos } = insertAtCursor(chatInputRef.current, prefix, suffix);
+    setChatInput(text);
+    
+    // Re-parse immediately to show preview
+    setChatLines(parseChatLog(text));
+
+    // Restore focus and cursor
+    requestAnimationFrame(() => {
+      if (chatInputRef.current) {
+        chatInputRef.current.focus();
+        chatInputRef.current.setSelectionRange(cursorPos, cursorPos);
+      }
+    });
+  };
+
+  const updateCustomColor = (index: number, newColor: string) => {
+    const updated = [...customColors];
+    updated[index] = newColor;
+    setCustomColors(updated);
+  };
+
   // --- Manual Crop Handlers ---
 
   const startManualCrop = () => {
@@ -292,10 +406,17 @@ const App = () => {
     const startX = cropStartPos.current.x;
     const startY = cropStartPos.current.y;
 
-    const w = Math.abs(currentX - startX);
-    const h = Math.abs(currentY - startY);
+    let w = Math.abs(currentX - startX);
+    let h = Math.abs(currentY - startY);
     const x = Math.min(currentX, startX);
     const y = Math.min(currentY, startY);
+
+    // Aspect Ratio Lock if both Target Width & Height are set
+    if (targetWidth && targetHeight) {
+       const aspect = Number(targetWidth) / Number(targetHeight);
+       // Adjust height based on width to maintain aspect
+       h = w / aspect;
+    }
 
     setCropSelection({ x, y, w, h });
   };
@@ -333,18 +454,30 @@ const App = () => {
       const realW = cropSelection.w * scaleX;
       const realH = cropSelection.h * scaleY;
 
-      // Target width 1000px
-      const targetWidth = 1000;
-      const resizeScale = targetWidth / realW;
-      const targetHeight = realH * resizeScale;
+      // Determine Final Dimensions
+      let finalW = 1000; // Default fallback
+      let finalH = (finalW / realW) * realH;
 
-      canvas.width = targetWidth;
-      canvas.height = targetHeight;
+      if (targetWidth && targetHeight) {
+        finalW = Number(targetWidth);
+        finalH = Number(targetHeight);
+      } else if (targetWidth) {
+        finalW = Number(targetWidth);
+        finalH = (finalW / realW) * realH;
+      } else if (targetHeight) {
+        finalH = Number(targetHeight);
+        finalW = (finalH / realH) * realW;
+      }
 
+      canvas.width = finalW;
+      canvas.height = finalH;
+
+      // Smooth scaling
+      ctx.imageSmoothingQuality = "high";
       ctx.drawImage(
         img,
         realX, realY, realW, realH, 
-        0, 0, targetWidth, targetHeight 
+        0, 0, finalW, finalH 
       );
 
       setProcessedImage(canvas.toDataURL("image/jpeg", 0.9));
@@ -396,7 +529,6 @@ const App = () => {
 
       if (result.text) {
         let cleanText = result.text.trim();
-        // Cleanup just in case model adds backticks
         if (cleanText.startsWith("```")) {
            cleanText = cleanText.replace(/^```(text)?\n/i, "").replace(/\n```$/, "");
         }
@@ -440,6 +572,111 @@ const App = () => {
     dragStartRef.current = null;
   };
 
+  // --- Render Rich Text to Canvas ---
+  // Helper to draw text with *emotes*, /italics/, ||redaction|| and [#HEX]...[/#]
+  const drawRichTextLine = (
+    ctx: CanvasRenderingContext2D, 
+    text: string, 
+    x: number, 
+    y: number, 
+    baseFont: string,
+    baseColor: string,
+    strokeW: number,
+    hasBackground: boolean
+  ) => {
+    // Match: [ #HEX ]...[ /# ] OR ||...|| OR *...* OR /.../
+    const parts = text.split(/(\[#[0-9a-fA-F]{6}\].*?\[\/#\]|\|\|.*?\|\||\*.*?\*|\/.*?\/)/g);
+    
+    // First pass: Draw Backgrounds (if enabled) and calculate widths for precise placement
+    if (hasBackground) {
+        let bgX = x;
+        parts.forEach(part => {
+            if (!part) return;
+            let content = part;
+            let isItalic = false;
+             if (part.startsWith("||") && part.endsWith("||")) {
+                content = part.slice(2, -2);
+            } else if (part.startsWith("*") && part.endsWith("*")) {
+                content = part; 
+            } else if (part.startsWith("/") && part.endsWith("/")) {
+                isItalic = true;
+                content = part.slice(1, -1);
+            } else if (part.match(/^\[#[0-9a-fA-F]{6}\]/)) {
+                content = part.replace(/^\[#[0-9a-fA-F]{6}\]/, "").replace(/\[\/#\]$/, "");
+            }
+
+            ctx.font = isItalic ? `italic ${baseFont}` : baseFont;
+            const metrics = ctx.measureText(content);
+            const h = parseInt(baseFont);
+            ctx.fillStyle = "black";
+            // Draw a slightly larger box for better look
+            ctx.fillRect(bgX, y, metrics.width, h);
+            bgX += metrics.width;
+        });
+    }
+
+    // Second pass: Draw Text & Outline
+    let currentX = x;
+
+    // If outline is enabled and no background, we calculate offsets
+    const shadowOffsets = (!hasBackground && strokeW > 0) ? getShadowOffsets(strokeW) : [];
+
+    parts.forEach(part => {
+      if (!part) return;
+
+      let isRedacted = false;
+      let isEmote = false;
+      let isItalic = false;
+      let customColor = null;
+      let content = part;
+
+      if (part.startsWith("||") && part.endsWith("||")) {
+        isRedacted = true;
+        content = part.slice(2, -2);
+      } else if (part.startsWith("*") && part.endsWith("*")) {
+        isEmote = true;
+        content = part; 
+      } else if (part.startsWith("/") && part.endsWith("/")) {
+        isItalic = true;
+        content = part.slice(1, -1);
+      } else if (part.match(/^\[#[0-9a-fA-F]{6}\]/)) {
+        // Extract Color
+        const hex = part.match(/^\[(#[0-9a-fA-F]{6})\]/)?.[1];
+        if (hex) customColor = hex;
+        content = part.replace(/^\[#[0-9a-fA-F]{6}\]/, "").replace(/\[\/#\]$/, "");
+      }
+
+      // Set styles
+      ctx.font = isItalic ? `italic ${baseFont}` : baseFont;
+      
+      if (isRedacted) {
+        const metrics = ctx.measureText(content);
+        ctx.fillStyle = "black";
+        // No stroke for redacted
+        ctx.fillRect(currentX, y, metrics.width, parseInt(baseFont));
+        currentX += metrics.width;
+      } else {
+        // 1. Draw Outline Layers (Text Shadow Simulation)
+        if (shadowOffsets.length > 0) {
+           ctx.fillStyle = "black";
+           shadowOffsets.forEach(offset => {
+             ctx.fillText(content, currentX + offset.x, y + offset.y);
+           });
+        }
+
+        // 2. Draw Main Text
+        let fill = baseColor;
+        if (isEmote) fill = PRESET_COLORS.me;
+        if (customColor) fill = customColor;
+
+        ctx.fillStyle = fill;
+        ctx.fillText(content, currentX, y);
+        
+        currentX += ctx.measureText(content).width;
+      }
+    });
+  };
+
   // Export Logic
   const handleExport = async () => {
     if (!processedImage && !originalImage) return;
@@ -464,23 +701,27 @@ const App = () => {
       const scaleY = img.height / rect.height;
 
       // Font construction
-      const fontString = `${fontBold ? "bold " : ""}${fontSize * scaleX}px ${fontFamily}, sans-serif`;
-      ctx.font = fontString;
+      const baseFontSize = fontSize * scaleX;
+      const baseFontString = `${fontBold ? "bold " : ""}${baseFontSize}px ${fontFamily}, sans-serif`;
       
       ctx.textBaseline = "top";
-      ctx.lineWidth = strokeWidth * scaleX; 
-      ctx.lineJoin = "round";
-      ctx.strokeStyle = "black";
+      ctx.lineJoin = "round"; // Doesn't matter now as we use shadow method
 
       chatLines.forEach((line, idx) => {
         const y = (overlayPos.y * scaleY) + (idx * lineHeight * scaleY);
         const x = (overlayPos.x * scaleX);
         
-        // Draw outline (stroke)
-        ctx.strokeText(line.text, x, y);
-        // Draw fill
-        ctx.fillStyle = line.color;
-        ctx.fillText(line.text, x, y);
+        // Custom Render for Rich Text
+        drawRichTextLine(
+          ctx, 
+          line.text, 
+          x, 
+          y, 
+          baseFontString, 
+          line.color, 
+          strokeWidth * scaleX,
+          textBackground
+        );
       });
 
       // Date based filename
@@ -500,6 +741,29 @@ const App = () => {
       link.href = canvas.toDataURL(`image/${exportFormat}`, 0.9);
       link.click();
     }
+  };
+
+  // Helper to render preview text (HTML/React version of the Canvas logic)
+  const renderPreviewLine = (text: string) => {
+    const parts = text.split(/(\[#[0-9a-fA-F]{6}\].*?\[\/#\]|\|\|.*?\|\||\*.*?\*|\/.*?\/)/g);
+    return (
+      <>
+        {parts.map((part, i) => {
+          if (part.startsWith("||") && part.endsWith("||")) {
+            return <span key={i} className="bg-black text-black select-none px-1">REDACTED</span>;
+          } else if (part.startsWith("*") && part.endsWith("*")) {
+            return <span key={i} style={{ color: PRESET_COLORS.me }}>{part}</span>;
+          } else if (part.startsWith("/") && part.endsWith("/")) {
+            return <span key={i} className="italic">{part.slice(1, -1)}</span>;
+          } else if (part.match(/^\[#[0-9a-fA-F]{6}\]/)) {
+             const hex = part.match(/^\[(#[0-9a-fA-F]{6})\]/)?.[1];
+             const content = part.replace(/^\[#[0-9a-fA-F]{6}\]/, "").replace(/\[\/#\]$/, "");
+             return <span key={i} style={{ color: hex || 'inherit' }}>{content}</span>
+          }
+          return <span key={i}>{part}</span>;
+        })}
+      </>
+    );
   };
 
   return (
@@ -522,24 +786,71 @@ const App = () => {
       {/* Settings Modal */}
       {isSettingsOpen && (
         <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#1e1e1e] border border-gray-700 p-6 rounded-lg shadow-2xl w-full max-w-md">
+          <div className="bg-[#1e1e1e] border border-gray-700 p-6 rounded-lg shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
              <div className="flex justify-between items-center mb-4">
                 <h2 className="text-lg font-bold text-white flex items-center gap-2"><Settings size={18}/> Settings</h2>
                 <button onClick={() => setIsSettingsOpen(false)} className="text-gray-400 hover:text-white"><X size={18}/></button>
              </div>
              
-             <div className="mb-4">
-               <label className="block text-xs text-gray-400 mb-2 uppercase font-bold">Gemini API Key</label>
-               <input 
-                 type="password" 
-                 placeholder="Enter your Gemini API Key..." 
-                 className="w-full bg-[#0a0a0a] border border-gray-700 rounded p-2 text-sm focus:border-purple-500 outline-none text-white"
-                 value={apiKey}
-                 onChange={(e) => saveApiKey(e.target.value)}
-               />
-               <p className="text-[10px] text-gray-500 mt-2">
-                 Required for AI Filtering. The key is saved in your browser's local storage.
-               </p>
+             <div className="mb-6 space-y-4">
+               <div>
+                  <label className="block text-xs text-gray-400 mb-2 uppercase font-bold">Gemini API Key</label>
+                  <input 
+                    type="password" 
+                    placeholder="Enter your Gemini API Key..." 
+                    className="w-full bg-[#0a0a0a] border border-gray-700 rounded p-2 text-sm focus:border-purple-500 outline-none text-white"
+                    value={apiKey}
+                    onChange={(e) => saveApiKey(e.target.value)}
+                  />
+                  <p className="text-[10px] text-gray-500 mt-1">Required for AI Filtering.</p>
+               </div>
+
+               <div className="border-t border-gray-800 pt-4">
+                 <label className="block text-xs text-gray-400 mb-2 uppercase font-bold">Target Output Resolution</label>
+                 <div className="grid grid-cols-2 gap-2">
+                   <div>
+                      <span className="text-[10px] text-gray-500 block mb-1">Width (px)</span>
+                      <input 
+                        type="number" 
+                        placeholder="Default: 1000"
+                        className="w-full bg-[#0a0a0a] border border-gray-700 rounded p-2 text-sm focus:border-purple-500 outline-none text-white"
+                        value={targetWidth}
+                        onChange={(e) => setTargetWidth(e.target.value ? Number(e.target.value) : "")}
+                      />
+                   </div>
+                   <div>
+                      <span className="text-[10px] text-gray-500 block mb-1">Height (px)</span>
+                      <input 
+                        type="number" 
+                        placeholder="Auto if empty"
+                        className="w-full bg-[#0a0a0a] border border-gray-700 rounded p-2 text-sm focus:border-purple-500 outline-none text-white"
+                        value={targetHeight}
+                        onChange={(e) => setTargetHeight(e.target.value ? Number(e.target.value) : "")}
+                      />
+                   </div>
+                 </div>
+                 <p className="text-[10px] text-gray-500 mt-2">
+                   If both are set, the crop tool will lock to this aspect ratio. If only width is set, height will scale automatically.
+                 </p>
+               </div>
+
+               <div className="border-t border-gray-800 pt-4">
+                  <label className="block text-xs text-gray-400 mb-2 uppercase font-bold">Custom Toolbar Colors</label>
+                  <div className="flex gap-2 flex-wrap">
+                    {customColors.map((color, idx) => (
+                      <div key={idx} className="flex flex-col items-center gap-1">
+                         <input 
+                            type="color" 
+                            value={color}
+                            onChange={(e) => updateCustomColor(idx, e.target.value)}
+                            className="w-8 h-8 rounded cursor-pointer border-none p-0 bg-transparent"
+                         />
+                         <span className="text-[9px] text-gray-500 uppercase">{idx + 1}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-[10px] text-gray-500 mt-1">These colors appear as buttons in your chat editor.</p>
+               </div>
              </div>
 
              <div className="flex justify-end">
@@ -637,11 +948,51 @@ const App = () => {
               </div>
             )}
 
+            {/* Chat Formatting Toolbar */}
+            <div className="flex flex-wrap items-center gap-1 mb-1 bg-[#0f0f0f] p-1 rounded border border-gray-700 border-b-0 rounded-b-none">
+               <button 
+                 onClick={() => applyFormat('emote')}
+                 className="p-1.5 rounded hover:bg-gray-700 text-gray-400 hover:text-[#c2a2da]" 
+                 title="Highlight Emote (*text*)"
+               >
+                 <Palette size={14} />
+               </button>
+               <button 
+                 onClick={() => applyFormat('italic')}
+                 className="p-1.5 rounded hover:bg-gray-700 text-gray-400 hover:text-white"
+                 title="Italic (/text/)"
+               >
+                 <Italic size={14} />
+               </button>
+               <button 
+                 onClick={() => applyFormat('redact')}
+                 className="p-1.5 rounded hover:bg-gray-700 text-gray-400 hover:text-red-400"
+                 title="Redact (||text||)"
+               >
+                 <EyeOff size={14} />
+               </button>
+               
+               {/* Custom Color Buttons */}
+               <div className="w-[1px] h-4 bg-gray-700 mx-1"></div>
+               {customColors.map((color, idx) => (
+                 <button
+                    key={idx}
+                    onClick={() => applyFormat('color', color)}
+                    className="w-5 h-5 rounded border border-gray-600 hover:scale-110 transition-transform"
+                    style={{ backgroundColor: color }}
+                    title={`Apply Custom Color ${idx + 1}`}
+                 />
+               ))}
+            </div>
+
             <textarea
-              className="w-full flex-1 bg-[#0f0f0f] border border-gray-700 rounded p-3 text-xs font-mono text-gray-300 focus:outline-none focus:border-purple-500 resize-none mb-2"
-              placeholder="Paste chatlog here (Ctrl+V)..."
+              ref={chatInputRef}
+              className="w-full flex-1 bg-[#0f0f0f] border border-gray-700 rounded rounded-t-none p-3 text-xs font-mono text-gray-300 focus:outline-none focus:border-purple-500 resize-none mb-2"
+              placeholder="Paste chatlog here..."
               value={chatInput}
-              onChange={(e) => setChatInput(e.target.value)}
+              onChange={(e) => {
+                setChatInput(e.target.value);
+              }}
             />
             <button
               onClick={handleProcessChat}
@@ -651,46 +1002,79 @@ const App = () => {
             </button>
 
             {/* Style Controls */}
-            <div className="mt-4 grid grid-cols-2 gap-2">
-               <div className="col-span-2">
-                  <label className="text-[10px] text-gray-500 uppercase block mb-1">Font</label>
-                  <select 
-                     value={fontFamily}
-                     onChange={(e) => setFontFamily(e.target.value)}
-                     className="w-full bg-[#0f0f0f] border border-gray-700 rounded px-2 py-1 text-xs text-gray-300 outline-none focus:border-purple-500"
-                  >
-                    {FONT_OPTIONS.map(font => (
-                      <option key={font.value} value={font.value}>{font.name}</option>
-                    ))}
-                  </select>
+            <div className="mt-4 space-y-3">
+               <div className="grid grid-cols-2 gap-2">
+                 <div className="col-span-2">
+                    <label className="text-[10px] text-gray-500 uppercase block mb-1">Font</label>
+                    <select 
+                       value={fontFamily}
+                       onChange={(e) => setFontFamily(e.target.value)}
+                       className="w-full bg-[#0f0f0f] border border-gray-700 rounded px-2 py-1 text-xs text-gray-300 outline-none focus:border-purple-500"
+                    >
+                      {FONT_OPTIONS.map(font => (
+                        <option key={font.value} value={font.value}>{font.name}</option>
+                      ))}
+                    </select>
+                 </div>
+                 <div>
+                   <label className="text-[10px] text-gray-500 uppercase block mb-1">Size (px)</label>
+                   <input 
+                      type="number" 
+                      value={fontSize} 
+                      onChange={e => setFontSize(Number(e.target.value))}
+                      className="w-full bg-[#0f0f0f] border border-gray-700 rounded px-2 py-1 text-xs outline-none focus:border-purple-500"
+                   />
+                 </div>
+                 <div>
+                   <label className="text-[10px] text-gray-500 uppercase block mb-1">Line Height</label>
+                   <input 
+                      type="number" 
+                      value={lineHeight} 
+                      onChange={e => setLineHeight(Number(e.target.value))}
+                      className="w-full bg-[#0f0f0f] border border-gray-700 rounded px-2 py-1 text-xs outline-none focus:border-purple-500"
+                   />
+                 </div>
                </div>
+
                <div>
-                 <label className="text-[10px] text-gray-500 uppercase block mb-1">Size (px)</label>
+                 <label className="text-[10px] text-gray-500 uppercase block mb-1 flex justify-between">
+                   <span>Outline Strength</span>
+                   <span className="text-white">{strokeWidth}</span>
+                 </label>
                  <input 
-                    type="number" 
-                    value={fontSize} 
-                    onChange={e => setFontSize(Number(e.target.value))}
-                    className="w-full bg-[#0f0f0f] border border-gray-700 rounded px-2 py-1 text-xs outline-none focus:border-purple-500"
+                   type="range" 
+                   min="0" 
+                   max="5" 
+                   step="0.5"
+                   value={strokeWidth}
+                   onChange={(e) => setStrokeWidth(Number(e.target.value))}
+                   disabled={textBackground}
+                   className={`w-full accent-purple-600 h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer ${textBackground ? 'opacity-50' : ''}`}
                  />
                </div>
-               <div>
-                 <label className="text-[10px] text-gray-500 uppercase block mb-1">Line Height</label>
-                 <input 
-                    type="number" 
-                    value={lineHeight} 
-                    onChange={e => setLineHeight(Number(e.target.value))}
-                    className="w-full bg-[#0f0f0f] border border-gray-700 rounded px-2 py-1 text-xs outline-none focus:border-purple-500"
-                 />
-               </div>
-               <div className="col-span-2 flex items-center gap-2 mt-1">
-                 <input 
-                   type="checkbox" 
-                   id="boldToggle"
-                   checked={fontBold}
-                   onChange={(e) => setFontBold(e.target.checked)}
-                   className="w-3 h-3 rounded border-gray-700 bg-[#0f0f0f] text-purple-600 focus:ring-purple-500 focus:ring-offset-0 focus:ring-1"
-                 />
-                 <label htmlFor="boldToggle" className="text-xs text-gray-400 cursor-pointer select-none">Bold Text</label>
+
+               <div className="flex items-center justify-between mt-2">
+                 <div className="flex items-center gap-2">
+                   <input 
+                     type="checkbox" 
+                     id="boldToggle"
+                     checked={fontBold}
+                     onChange={(e) => setFontBold(e.target.checked)}
+                     className="w-3 h-3 rounded border-gray-700 bg-[#0f0f0f] text-purple-600 focus:ring-purple-500 focus:ring-offset-0 focus:ring-1"
+                   />
+                   <label htmlFor="boldToggle" className="text-xs text-gray-400 cursor-pointer select-none">Bold</label>
+                 </div>
+                 
+                 <div className="flex items-center gap-2">
+                   <input 
+                     type="checkbox" 
+                     id="bgToggle"
+                     checked={textBackground}
+                     onChange={(e) => setTextBackground(e.target.checked)}
+                     className="w-3 h-3 rounded border-gray-700 bg-[#0f0f0f] text-purple-600 focus:ring-purple-500 focus:ring-offset-0 focus:ring-1"
+                   />
+                   <label htmlFor="bgToggle" className="text-xs text-gray-400 cursor-pointer select-none">Black Background</label>
+                 </div>
                </div>
             </div>
           </section>
@@ -727,13 +1111,13 @@ const App = () => {
             <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm">
               <div className="absolute top-4 z-50 flex gap-4 bg-[#1a1a1a] p-2 rounded-lg border border-gray-700 shadow-2xl">
                 <div className="text-white text-sm font-bold flex items-center gap-2 px-2">
-                  <CropIcon size={16} className="text-purple-400"/> Manual Crop Mode
+                  <CropIcon size={16} className="text-purple-400"/> Crop Mode
                 </div>
                 <button 
                   onClick={applyManualCrop} 
                   className="bg-purple-600 hover:bg-purple-500 text-white px-3 py-1 rounded text-xs font-bold flex items-center gap-1"
                 >
-                  <Check size={12} /> Apply & Resize (1000px)
+                  <Check size={12} /> Apply
                 </button>
                 <button 
                   onClick={() => setIsManualCropping(false)} 
@@ -773,7 +1157,7 @@ const App = () => {
                   />
                 )}
               </div>
-              <p className="text-gray-400 text-xs mt-4">Drag to select the area you want to keep.</p>
+              <p className="text-gray-400 text-xs mt-4">Drag to select. {targetWidth && targetHeight ? "Aspect ratio is locked." : "Freeform crop."}</p>
             </div>
           )}
 
@@ -824,26 +1208,30 @@ const App = () => {
                      pointerEvents: 'auto' 
                    }}
                  >
-                   {chatLines.map((line) => (
-                     <div
-                       key={line.id}
-                       style={{
-                         fontFamily: `${fontFamily}, sans-serif`,
-                         fontSize: `${fontSize}px`,
-                         fontWeight: fontBold ? 'bold' : 'normal',
-                         color: line.color,
-                         lineHeight: `${lineHeight}px`,
-                         textShadow: 
-                           `-1px -1px 0 #000, 
-                            1px -1px 0 #000, 
-                            -1px 1px 0 #000, 
-                            1px 1px 0 #000`
-                       }}
-                       className="whitespace-pre-wrap"
-                     >
-                       {line.text}
-                     </div>
-                   ))}
+                   {chatLines.map((line) => {
+                     // Generate Shadow String for Preview
+                     const shadowOffsets = (!textBackground && strokeWidth > 0) ? getShadowOffsets(strokeWidth) : [];
+                     const textShadow = shadowOffsets.map(o => `${o.x}px ${o.y}px 0 #000`).join(', ');
+
+                     return (
+                       <div
+                         key={line.id}
+                         style={{
+                           fontFamily: `${fontFamily}, sans-serif`,
+                           fontSize: `${fontSize}px`,
+                           fontWeight: fontBold ? 'bold' : 'normal',
+                           color: line.color,
+                           lineHeight: `${lineHeight}px`,
+                           textShadow: textShadow,
+                           backgroundColor: textBackground ? 'black' : 'transparent'
+                         }}
+                         className={`whitespace-pre-wrap ${textBackground ? 'inline-block w-fit px-0.5' : ''}`}
+                       >
+                         {/* Render Preview with simple HTML replacements */}
+                         {renderPreviewLine(line.text)}
+                       </div>
+                     )
+                   })}
                  </div>
                )}
             </div>

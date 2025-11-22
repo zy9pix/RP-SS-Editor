@@ -7,9 +7,14 @@ A specialized web tool for Text-Based Roleplay servers to easily edit screenshot
 *   **Drag & Drop / Paste Support**: Simply drag images or text files onto the window, or use CTRL+V to paste content directly.
 *   **Smart Chatlog Parsing**: Automatically colors chat lines based on RP context (Chat, /me, /do, Radio, Phone, etc.).
 *   **Manual Crop & Resize**: Select the action area of your screenshot and automatically resize it to a standard 1000px width for forum consistency.
+*   **Custom Aspect Ratio**: Lock your crop tool to specific dimensions or aspect ratios (defined in Settings) to maintain a consistent look across all your posts.
 *   **AI-Powered Chat Filter**: Uses Google Gemini 2.5 Flash to intelligently clean up chatlogs, removing duplicates, fixing spacing, or filtering specific content based on your instructions.
-*   **Customizable Typography**: Choose from classic fonts (Helvetica, Verdana, Georgia, etc.), adjust size, bolding, and line height.
-*   **Persistence**: Your API Key and styling preferences are saved automatically in your browser.
+*   **Advanced Typography**:
+    *   **Adjustable Outline/Shadow**: Control the thickness of the text outline (using a robust text-shadow method) to ensure readability on any background.
+    *   **Black Background Mode**: Optional "Black Box" mode for text to mimic specific server styles.
+    *   **Custom Fonts**: Choose from classic fonts (Helvetica, Verdana, Georgia, etc.).
+*   **Custom Color Palette**: Define up to 5 custom colors in settings that appear in your quick-access toolbar for easy highlighting.
+*   **Persistence**: Your API Key, styling preferences (colors, fonts, outline), and output settings are saved automatically in your browser.
 *   **Export**: Save your work as PNG, JPG, or WEBP with auto-generated timestamps.
 
 ## Setup & Usage
