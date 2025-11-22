@@ -45,8 +45,11 @@ const DEFAULT_CUSTOM_COLORS = [
 
 const FONT_OPTIONS = [
   { name: "Helvetica", value: "Helvetica" },
-  { name: "Verdana (Classic)", value: "Verdana" },
+  { name: "Roboto", value: "Roboto" },
+  { name: "Open Sans", value: "Open Sans" },
+  { name: "Inter", value: "Inter" },
   { name: "Arial", value: "Arial" },
+  { name: "Verdana", value: "Verdana" },
   { name: "Tahoma", value: "Tahoma" },
   { name: "Courier New", value: "Courier New" },
   { name: "Georgia", value: "Georgia" },
@@ -111,36 +114,6 @@ const insertAtCursor = (input: HTMLTextAreaElement, prefix: string, suffix: stri
   };
 };
 
-// Helper to generate offsets for text-shadow style outline
-const getShadowOffsets = (width: number) => {
-  if (width <= 0) return [];
-  const offsets: {x: number, y: number}[] = [];
-  
-  // Generate layers for every pixel step up to width to create a solid fill
-  const layers = [];
-  for (let r = 1; r <= Math.floor(width); r++) {
-    layers.push(r);
-  }
-  // Add partial step if needed (e.g. width 1.5 -> adds 1.5)
-  if (width % 1 !== 0) {
-    layers.push(width);
-  }
-
-  // For each layer, add 8 directions
-  layers.forEach(r => {
-     offsets.push({x: -r, y: -r});
-     offsets.push({x: 0, y: -r});
-     offsets.push({x: r, y: -r});
-     offsets.push({x: -r, y: 0});
-     offsets.push({x: r, y: 0});
-     offsets.push({x: -r, y: 1});
-     offsets.push({x: 0, y: 1});
-     offsets.push({x: r, y: 1});
-  });
-
-  return offsets;
-};
-
 // --- Main Component ---
 
 const App = () => {
@@ -172,7 +145,7 @@ const App = () => {
   // Style State 
   const [fontSize, setFontSize] = useState(15); 
   const [lineHeight, setLineHeight] = useState(18);
-  const [strokeWidth, setStrokeWidth] = useState(1); // Outline width
+  const [strokeWidth, setStrokeWidth] = useState(2); // Outline width (Default higher for stroke)
   const [textBackground, setTextBackground] = useState(false); // Black background box
   const [fontFamily, setFontFamily] = useState("Helvetica");
   const [fontBold, setFontBold] = useState(true); 
@@ -572,109 +545,151 @@ const App = () => {
     dragStartRef.current = null;
   };
 
-  // --- Render Rich Text to Canvas ---
-  // Helper to draw text with *emotes*, /italics/, ||redaction|| and [#HEX]...[/#]
-  const drawRichTextLine = (
+  // --- Render Rich Text to Canvas (with Wrapping) ---
+  const drawWrappedRichText = (
     ctx: CanvasRenderingContext2D, 
     text: string, 
     x: number, 
     y: number, 
-    baseFont: string,
+    maxWidth: number,
+    lineHeight: number,
+    baseFontString: string,
     baseColor: string,
     strokeW: number,
-    hasBackground: boolean
+    hasBackground: boolean,
+    baseFontSize: number
   ) => {
-    // Match: [ #HEX ]...[ /# ] OR ||...|| OR *...* OR /.../
+    // Regex to split rich text tokens
     const parts = text.split(/(\[#[0-9a-fA-F]{6}\].*?\[\/#\]|\|\|.*?\|\||\*.*?\*|\/.*?\/)/g);
     
-    // First pass: Draw Backgrounds (if enabled) and calculate widths for precise placement
-    if (hasBackground) {
-        let bgX = x;
-        parts.forEach(part => {
-            if (!part) return;
-            let content = part;
-            let isItalic = false;
-             if (part.startsWith("||") && part.endsWith("||")) {
-                content = part.slice(2, -2);
-            } else if (part.startsWith("*") && part.endsWith("*")) {
-                content = part; 
-            } else if (part.startsWith("/") && part.endsWith("/")) {
-                isItalic = true;
-                content = part.slice(1, -1);
-            } else if (part.match(/^\[#[0-9a-fA-F]{6}\]/)) {
-                content = part.replace(/^\[#[0-9a-fA-F]{6}\]/, "").replace(/\[\/#\]$/, "");
-            }
-
-            ctx.font = isItalic ? `italic ${baseFont}` : baseFont;
-            const metrics = ctx.measureText(content);
-            const h = parseInt(baseFont);
-            ctx.fillStyle = "black";
-            // Draw a slightly larger box for better look
-            ctx.fillRect(bgX, y, metrics.width, h);
-            bgX += metrics.width;
-        });
+    // Flatten into a stream of word-objects
+    interface WordObj {
+       text: string;
+       width: number;
+       font: string;
+       fill: string;
+       stroke: boolean;
+       isRedacted: boolean;
     }
-
-    // Second pass: Draw Text & Outline
-    let currentX = x;
-
-    // If outline is enabled and no background, we calculate offsets
-    const shadowOffsets = (!hasBackground && strokeW > 0) ? getShadowOffsets(strokeW) : [];
+    
+    let words: WordObj[] = [];
 
     parts.forEach(part => {
       if (!part) return;
 
-      let isRedacted = false;
-      let isEmote = false;
-      let isItalic = false;
-      let customColor = null;
       let content = part;
-
+      let isItalic = false;
+      let isRedacted = false;
+      let fill = baseColor;
+      let stroke = !hasBackground && strokeW > 0;
+      let font = baseFontString; 
+      
+      // Determine Style
       if (part.startsWith("||") && part.endsWith("||")) {
         isRedacted = true;
         content = part.slice(2, -2);
+        stroke = false;
       } else if (part.startsWith("*") && part.endsWith("*")) {
-        isEmote = true;
+        fill = PRESET_COLORS.me;
         content = part; 
       } else if (part.startsWith("/") && part.endsWith("/")) {
         isItalic = true;
         content = part.slice(1, -1);
       } else if (part.match(/^\[#[0-9a-fA-F]{6}\]/)) {
-        // Extract Color
         const hex = part.match(/^\[(#[0-9a-fA-F]{6})\]/)?.[1];
-        if (hex) customColor = hex;
+        if (hex) fill = hex;
         content = part.replace(/^\[#[0-9a-fA-F]{6}\]/, "").replace(/\[\/#\]$/, "");
       }
 
-      // Set styles
-      ctx.font = isItalic ? `italic ${baseFont}` : baseFont;
-      
-      if (isRedacted) {
-        const metrics = ctx.measureText(content);
-        ctx.fillStyle = "black";
-        // No stroke for redacted
-        ctx.fillRect(currentX, y, metrics.width, parseInt(baseFont));
-        currentX += metrics.width;
-      } else {
-        // 1. Draw Outline Layers (Text Shadow Simulation)
-        if (shadowOffsets.length > 0) {
-           ctx.fillStyle = "black";
-           shadowOffsets.forEach(offset => {
-             ctx.fillText(content, currentX + offset.x, y + offset.y);
-           });
-        }
-
-        // 2. Draw Main Text
-        let fill = baseColor;
-        if (isEmote) fill = PRESET_COLORS.me;
-        if (customColor) fill = customColor;
-
-        ctx.fillStyle = fill;
-        ctx.fillText(content, currentX, y);
-        
-        currentX += ctx.measureText(content).width;
+      // Apply Italic to font string if needed
+      if (isItalic) {
+          font = "italic " + baseFontString;
       }
+
+      // Split content into words/spaces, capturing whitespace
+      const tokens = content.split(/(\s+)/);
+      
+      tokens.forEach(token => {
+          if (!token) return;
+          ctx.font = font;
+          const metrics = ctx.measureText(token);
+          words.push({
+              text: token,
+              width: metrics.width,
+              font,
+              fill,
+              stroke,
+              isRedacted
+          });
+      });
     });
+
+    // Render loop with wrapping
+    let currentY = y;
+    
+    let lineBuffer: WordObj[] = [];
+    let lineBufferWidth = 0;
+
+    const flushLine = () => {
+        if (lineBuffer.length === 0) return;
+
+        // 1. Draw Backgrounds (Behind everything)
+        let drawX = x;
+        lineBuffer.forEach(w => {
+            if (hasBackground || w.isRedacted) {
+                 ctx.fillStyle = "black";
+                 ctx.fillRect(drawX, currentY, w.width, baseFontSize); 
+            }
+            drawX += w.width;
+        });
+
+        // 2. Draw Strokes
+        drawX = x;
+        lineBuffer.forEach(w => {
+             if (w.stroke && !w.isRedacted && w.text.trim()) {
+                ctx.font = w.font;
+                ctx.lineWidth = strokeW * 2;
+                ctx.strokeStyle = "black";
+                ctx.lineJoin = "round";
+                ctx.miterLimit = 2;
+                ctx.strokeText(w.text, drawX, currentY);
+             }
+             drawX += w.width;
+        });
+
+        // 3. Draw Fills
+        drawX = x;
+        lineBuffer.forEach(w => {
+             if (!w.isRedacted && w.text.trim()) {
+                 ctx.font = w.font;
+                 ctx.fillStyle = w.fill;
+                 ctx.fillText(w.text, drawX, currentY);
+             }
+             drawX += w.width;
+        });
+    };
+
+    words.forEach(word => {
+         // Check if adding this word exceeds maxWidth
+         if (lineBufferWidth + word.width > maxWidth && lineBuffer.length > 0) {
+             // Flush current
+             flushLine();
+             // Move down
+             currentY += lineHeight;
+             // Reset
+             lineBuffer = [];
+             lineBufferWidth = 0;
+         }
+         
+         lineBuffer.push(word);
+         lineBufferWidth += word.width;
+    });
+
+    // Flush remaining
+    flushLine();
+    
+    // Return the Y coordinate for the NEXT line of chat
+    return currentY + lineHeight;
   };
 
   // Export Logic
@@ -705,22 +720,26 @@ const App = () => {
       const baseFontString = `${fontBold ? "bold " : ""}${baseFontSize}px ${fontFamily}, sans-serif`;
       
       ctx.textBaseline = "top";
-      ctx.lineJoin = "round"; // Doesn't matter now as we use shadow method
+      
+      // Calculate starting positions and safe width
+      let currentY = (overlayPos.y * scaleY);
+      const startX = (overlayPos.x * scaleX);
+      // Calculate max width relative to image size, with some right-side padding
+      const maxWidth = img.width - startX - (20 * scaleX); 
 
-      chatLines.forEach((line, idx) => {
-        const y = (overlayPos.y * scaleY) + (idx * lineHeight * scaleY);
-        const x = (overlayPos.x * scaleX);
-        
-        // Custom Render for Rich Text
-        drawRichTextLine(
+      chatLines.forEach((line) => {
+        currentY = drawWrappedRichText(
           ctx, 
           line.text, 
-          x, 
-          y, 
+          startX, 
+          currentY, 
+          maxWidth,
+          lineHeight * scaleY, 
           baseFontString, 
           line.color, 
           strokeWidth * scaleX,
-          textBackground
+          textBackground,
+          baseFontSize
         );
       });
 
@@ -1209,10 +1228,6 @@ const App = () => {
                    }}
                  >
                    {chatLines.map((line) => {
-                     // Generate Shadow String for Preview
-                     const shadowOffsets = (!textBackground && strokeWidth > 0) ? getShadowOffsets(strokeWidth) : [];
-                     const textShadow = shadowOffsets.map(o => `${o.x}px ${o.y}px 0 #000`).join(', ');
-
                      return (
                        <div
                          key={line.id}
@@ -1222,7 +1237,8 @@ const App = () => {
                            fontWeight: fontBold ? 'bold' : 'normal',
                            color: line.color,
                            lineHeight: `${lineHeight}px`,
-                           textShadow: textShadow,
+                           WebkitTextStroke: (!textBackground && strokeWidth > 0) ? `${strokeWidth}px black` : '0',
+                           paintOrder: 'stroke fill',
                            backgroundColor: textBackground ? 'black' : 'transparent'
                          }}
                          className={`whitespace-pre-wrap ${textBackground ? 'inline-block w-fit px-0.5' : ''}`}
