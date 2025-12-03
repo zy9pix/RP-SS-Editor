@@ -15,7 +15,10 @@ import {
   Check,
   Italic,
   EyeOff,
-  Palette
+  Palette,
+  Globe,
+  Sliders,
+  RotateCcw
 } from "lucide-react";
 
 // --- Constants & Config ---
@@ -55,6 +58,129 @@ const FONT_OPTIONS = [
   { name: "Georgia", value: "Georgia" },
   { name: "Trebuchet MS", value: "Trebuchet MS" }
 ];
+
+const TRANSLATIONS = {
+  en: {
+    appTitle: "RP Screenshot Editor",
+    settings: "Settings",
+    apiKey: "Gemini API Key",
+    apiKeyPlaceholder: "Enter your Gemini API Key...",
+    apiKeyHelp: "Required for AI Filtering.",
+    resolution: "Target Output Resolution",
+    width: "Width (px)",
+    height: "Height (px)",
+    resHelp: "If both are set, the crop tool will lock to this aspect ratio. If only width is set, height will scale automatically.",
+    customColors: "Custom Toolbar Colors",
+    colorsHelp: "These colors appear as buttons in your chat editor.",
+    done: "Done",
+    uploadStep: "1. UPLOAD IMAGE",
+    uploadHelp: "Paste (Ctrl+V), Drag & Drop or Click",
+    manualCrop: "Manual Crop & Resize",
+    chatStep: "2. CHATLOG",
+    loadTxt: "Load .txt",
+    aiFilter: "AI Filter",
+    filterLabel: "What should I keep/remove?",
+    filterPlaceholder: "Ex: Remove OOC logs...",
+    go: "Go",
+    chatPlaceholder: "Paste chatlog here...",
+    renderChat: "Render Chat",
+    font: "Font",
+    size: "Size (px)",
+    lineHeight: "Line Height",
+    outlineStrength: "Outline Strength",
+    bold: "Bold",
+    blackBg: "Black Background",
+    export: "Export",
+    cropMode: "Crop Mode",
+    apply: "Apply",
+    cancel: "Cancel",
+    dragSelect: "Drag to select.",
+    aspectLocked: "Aspect ratio is locked.",
+    freeform: "Freeform crop.",
+    emptyState: "Drag & Drop or Paste Image Here",
+    language: "Language",
+    imgUploaded: "Image uploaded. Ready to crop.",
+    imgPasted: "Image pasted from clipboard.",
+    textPasted: "Text pasted from clipboard.",
+    imgDropped: "Image dropped.",
+    chatDropped: "Chatlog dropped.",
+    cropPrompt: "Click and drag on the image to select crop area.",
+    invalidSel: "Invalid selection. Please select an area.",
+    processing: "Cropping and resizing...",
+    cropDone: "Manual crop complete.",
+    errorCrop: "Error processing crop.",
+    filterErr: "Failed to filter chat. Check API key.",
+    noKey: "Please set your Gemini API Key in settings first.",
+    previewPlaceholder: "Default: 1000",
+    autoEmpty: "Auto if empty",
+    filterBtnLoading: "Filtering...",
+    imageAdjustments: "Image Adjustments",
+    brightness: "Brightness",
+    contrast: "Contrast",
+    saturation: "Saturation",
+    reset: "Reset"
+  },
+  tr: {
+    appTitle: "RP Ekran Görüntüsü Düzenleyici",
+    settings: "Ayarlar",
+    apiKey: "Gemini API Anahtarı",
+    apiKeyPlaceholder: "Gemini API Anahtarını gir...",
+    apiKeyHelp: "Yapay Zeka filtresi için gereklidir.",
+    resolution: "Hedef Çıktı Çözünürlüğü",
+    width: "Genişlik (px)",
+    height: "Yükseklik (px)",
+    resHelp: "Her ikisi de ayarlanırsa, kırpma aracı bu en boy oranına kilitlenir. Sadece genişlik ayarlanırsa, yükseklik otomatik ölçeklenir.",
+    customColors: "Özel Araç Çubuğu Renkleri",
+    colorsHelp: "Bu renkler sohbet editöründe buton olarak görünür.",
+    done: "Tamam",
+    uploadStep: "1. RESİM YÜKLE",
+    uploadHelp: "Yapıştır (Ctrl+V), Sürükle Bırak veya Tıkla",
+    manualCrop: "Manuel Kırp & Yeniden Boyutlandır",
+    chatStep: "2. SOHBET GÜNLÜĞÜ",
+    loadTxt: ".txt Yükle",
+    aiFilter: "YZ Filtresi",
+    filterLabel: "Neyi saklayayım/kaldırayım?",
+    filterPlaceholder: "Ör: OOC logları kaldır...",
+    go: "Git",
+    chatPlaceholder: "Sohbet günlüğünü buraya yapıştır...",
+    renderChat: "Sohbeti Oluştur",
+    font: "Yazı Tipi",
+    size: "Boyut (px)",
+    lineHeight: "Satır Yüksekliği",
+    outlineStrength: "Kontür Gücü",
+    bold: "Kalın",
+    blackBg: "Siyah Arkaplan",
+    export: "Dışa Aktar",
+    cropMode: "Kırpma Modu",
+    apply: "Uygula",
+    cancel: "İptal",
+    dragSelect: "Seçmek için sürükleyin.",
+    aspectLocked: "En boy oranı kilitli.",
+    freeform: "Serbest kırpma.",
+    emptyState: "Resmi Buraya Sürükle veya Yapıştır",
+    language: "Dil / Language",
+    imgUploaded: "Resim yüklendi. Kırpmaya hazır.",
+    imgPasted: "Resim panodan yapıştırıldı.",
+    textPasted: "Metin panodan yapıştırıldı.",
+    imgDropped: "Resim bırakıldı.",
+    chatDropped: "Chatlog bırakıldı.",
+    cropPrompt: "Kırpma alanını seçmek için resmin üzerine tıklayın ve sürükleyin.",
+    invalidSel: "Geçersiz seçim. Lütfen bir alan seçin.",
+    processing: "Kırpılıyor ve yeniden boyutlandırılıyor...",
+    cropDone: "Manuel kırpma tamamlandı.",
+    errorCrop: "Kırpma hatası.",
+    filterErr: "Sohbet filtrelenemedi. API anahtarını kontrol edin.",
+    noKey: "Lütfen önce ayarlardan Gemini API Anahtarınızı ayarlayın.",
+    previewPlaceholder: "Varsayılan: 1000",
+    autoEmpty: "Boşsa otomatik",
+    filterBtnLoading: "Filtreleniyor...",
+    imageAdjustments: "Resim Ayarları",
+    brightness: "Parlaklık",
+    contrast: "Kontrast",
+    saturation: "Doygunluk",
+    reset: "Sıfırla"
+  }
+};
 
 // --- Helper Functions ---
 
@@ -123,6 +249,9 @@ const App = () => {
   const [processedImage, setProcessedImage] = useState<string | null>(null); 
   const [isProcessing, setIsProcessing] = useState(false);
   const [statusMsg, setStatusMsg] = useState("");
+  
+  // Language State
+  const [language, setLanguage] = useState<'en' | 'tr'>('en');
 
   // Settings Modal State
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -151,6 +280,11 @@ const App = () => {
   const [fontBold, setFontBold] = useState(true); 
   const [customColors, setCustomColors] = useState<string[]>(DEFAULT_CUSTOM_COLORS);
 
+  // Image Adjustment State
+  const [imgBrightness, setImgBrightness] = useState(100);
+  const [imgContrast, setImgContrast] = useState(100);
+  const [imgSaturation, setImgSaturation] = useState(100);
+
   // Export State
   const [exportFormat, setExportFormat] = useState<"png" | "jpeg" | "webp">("png");
 
@@ -166,10 +300,29 @@ const App = () => {
   const cropContainerRef = useRef<HTMLDivElement>(null);
   const cropStartPos = useRef<{x: number, y: number} | null>(null);
 
+  // --- Translation Helper ---
+  const t = (key: keyof typeof TRANSLATIONS.en) => {
+    return TRANSLATIONS[language][key] || TRANSLATIONS['en'][key] || key;
+  };
+
   // --- Persistence & Initialization ---
 
   useEffect(() => {
-    // Load settings from localStorage
+    // 1. Language Init
+    const savedLang = localStorage.getItem("rp-editor-lang");
+    if (savedLang === 'en' || savedLang === 'tr') {
+      setLanguage(savedLang);
+    } else {
+      // Auto-detect
+      const browserLang = navigator.language.toLowerCase();
+      if (browserLang.startsWith('tr')) {
+        setLanguage('tr');
+      } else {
+        setLanguage('en');
+      }
+    }
+
+    // 2. Settings Init
     const savedKey = localStorage.getItem("rp-editor-api-key");
     if (savedKey) setApiKey(savedKey);
 
@@ -215,6 +368,17 @@ const App = () => {
     localStorage.setItem("rp-editor-api-key", key);
   };
 
+  const changeLanguage = (lang: 'en' | 'tr') => {
+    setLanguage(lang);
+    localStorage.setItem("rp-editor-lang", lang);
+  };
+
+  const resetImageAdjustments = () => {
+    setImgBrightness(100);
+    setImgContrast(100);
+    setImgSaturation(100);
+  };
+
   // --- Global Paste & Drop Handlers ---
 
   const handleGlobalPaste = useCallback((e: ClipboardEvent) => {
@@ -230,7 +394,7 @@ const App = () => {
           setProcessedImage(null);
           setIsManualCropping(false);
           setCropSelection(null);
-          setStatusMsg("Image pasted from clipboard.");
+          setStatusMsg(t('imgPasted'));
         }
       } else if (item.type === "text/plain") {
         if (
@@ -242,11 +406,11 @@ const App = () => {
         item.getAsString((s) => {
           setChatInput(s);
           setChatLines(parseChatLog(s));
-          setStatusMsg("Text pasted from clipboard.");
+          setStatusMsg(t('textPasted'));
         });
       }
     }
-  }, []);
+  }, [language]); // Depend on language for translation
 
   const handleGlobalDrop = useCallback((e: DragEvent) => {
     e.preventDefault();
@@ -260,7 +424,7 @@ const App = () => {
         setOriginalImage(url);
         setProcessedImage(null);
         setIsManualCropping(false);
-        setStatusMsg("Image dropped.");
+        setStatusMsg(t('imgDropped'));
       } else if (file.type === "text/plain" || file.name.endsWith(".txt")) {
         const reader = new FileReader();
         reader.onload = (event) => {
@@ -268,13 +432,13 @@ const App = () => {
           if (text) {
              setChatInput(text);
              setChatLines(parseChatLog(text));
-             setStatusMsg("Chatlog dropped.");
+             setStatusMsg(t('chatDropped'));
           }
         };
         reader.readAsText(file);
       }
     }
-  }, []);
+  }, [language]);
 
   useEffect(() => {
     window.addEventListener("paste", handleGlobalPaste);
@@ -298,7 +462,7 @@ const App = () => {
       setProcessedImage(null); 
       setIsManualCropping(false); 
       setCropSelection(null);
-      setStatusMsg("Image uploaded. Ready to crop.");
+      setStatusMsg(t('imgUploaded'));
     }
   };
 
@@ -356,7 +520,7 @@ const App = () => {
     setIsManualCropping(true);
     setProcessedImage(null);
     setCropSelection(null);
-    setStatusMsg("Click and drag on the image to select crop area.");
+    setStatusMsg(t('cropPrompt'));
   };
 
   const handleCropMouseDown = (e: React.MouseEvent) => {
@@ -400,13 +564,13 @@ const App = () => {
 
   const applyManualCrop = async () => {
     if (!originalImage || !cropSelection || cropSelection.w < 10 || cropSelection.h < 10) {
-      setStatusMsg("Invalid selection. Please select an area.");
+      setStatusMsg(t('invalidSel'));
       return;
     }
 
     try {
       setIsProcessing(true);
-      setStatusMsg("Cropping and resizing...");
+      setStatusMsg(t('processing'));
 
       const img = new Image();
       img.src = originalImage;
@@ -455,11 +619,11 @@ const App = () => {
 
       setProcessedImage(canvas.toDataURL("image/jpeg", 0.9));
       setIsManualCropping(false);
-      setStatusMsg("Manual crop complete.");
+      setStatusMsg(t('cropDone'));
 
     } catch (error) {
       console.error(error);
-      setStatusMsg("Error processing crop.");
+      setStatusMsg(t('errorCrop'));
     } finally {
       setIsProcessing(false);
     }
@@ -470,7 +634,7 @@ const App = () => {
   const handleAIFilter = async () => {
     if (!chatInput.trim()) return;
     if (!apiKey) {
-      alert("Please set your Gemini API Key in settings first.");
+      alert(t('noKey'));
       setIsSettingsOpen(true);
       return;
     }
@@ -513,7 +677,7 @@ const App = () => {
 
     } catch (error) {
       console.error("Filter error", error);
-      alert("Failed to filter chat. Check API key.");
+      alert(t('filterErr'));
     } finally {
       setIsFiltering(false);
     }
@@ -638,7 +802,8 @@ const App = () => {
         lineBuffer.forEach(w => {
             if (hasBackground || w.isRedacted) {
                  ctx.fillStyle = "black";
-                 ctx.fillRect(drawX, currentY, w.width, baseFontSize); 
+                 // FIXED: Use lineHeight instead of baseFontSize to close gaps
+                 ctx.fillRect(drawX, currentY, w.width, lineHeight); 
             }
             drawX += w.width;
         });
@@ -706,8 +871,15 @@ const App = () => {
     canvas.height = img.height;
 
     if (ctx) {
+      // Apply filters before drawing the image
+      // Note: This relies on modern browser support for context.filter
+      ctx.filter = `brightness(${imgBrightness}%) contrast(${imgContrast}%) saturate(${imgSaturation}%)`;
+
       // Draw BG
       ctx.drawImage(img, 0, 0);
+
+      // Reset filter for text so text isn't affected by image adjustments
+      ctx.filter = "none";
 
       // Draw Text
       const previewImg = document.getElementById("preview-image") as HTMLImageElement;
@@ -791,12 +963,12 @@ const App = () => {
       <header className="bg-[#1e1e1e] border-b border-gray-800 p-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Scissors className="text-purple-400" />
-          <h1 className="text-xl font-bold text-white">RP Screenshot Editor</h1>
+          <h1 className="text-xl font-bold text-white">{t('appTitle')}</h1>
         </div>
         <button 
           onClick={() => setIsSettingsOpen(true)}
           className="text-gray-400 hover:text-white transition-colors p-2 rounded hover:bg-gray-700"
-          title="Settings & API Key"
+          title={t('settings')}
         >
           <Settings size={20} />
         </button>
@@ -807,41 +979,61 @@ const App = () => {
         <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-[#1e1e1e] border border-gray-700 p-6 rounded-lg shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-bold text-white flex items-center gap-2"><Settings size={18}/> Settings</h2>
+                <h2 className="text-lg font-bold text-white flex items-center gap-2"><Settings size={18}/> {t('settings')}</h2>
                 <button onClick={() => setIsSettingsOpen(false)} className="text-gray-400 hover:text-white"><X size={18}/></button>
              </div>
              
              <div className="mb-6 space-y-4">
                <div>
-                  <label className="block text-xs text-gray-400 mb-2 uppercase font-bold">Gemini API Key</label>
+                  <label className="block text-xs text-gray-400 mb-2 uppercase font-bold">{t('apiKey')}</label>
                   <input 
                     type="password" 
-                    placeholder="Enter your Gemini API Key..." 
+                    placeholder={t('apiKeyPlaceholder')} 
                     className="w-full bg-[#0a0a0a] border border-gray-700 rounded p-2 text-sm focus:border-purple-500 outline-none text-white"
                     value={apiKey}
                     onChange={(e) => saveApiKey(e.target.value)}
                   />
-                  <p className="text-[10px] text-gray-500 mt-1">Required for AI Filtering.</p>
+                  <p className="text-[10px] text-gray-500 mt-1">{t('apiKeyHelp')}</p>
                </div>
 
+                <div className="border-t border-gray-800 pt-4">
+                  <label className="block text-xs text-gray-400 mb-2 uppercase font-bold flex items-center gap-2">
+                    <Globe size={14}/> {t('language')}
+                  </label>
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={() => changeLanguage('en')}
+                      className={`flex-1 py-2 text-xs font-bold rounded border ${language === 'en' ? 'bg-purple-600 border-purple-600 text-white' : 'bg-[#0a0a0a] border-gray-700 text-gray-400 hover:border-gray-500'}`}
+                    >
+                      English
+                    </button>
+                    <button 
+                      onClick={() => changeLanguage('tr')}
+                      className={`flex-1 py-2 text-xs font-bold rounded border ${language === 'tr' ? 'bg-purple-600 border-purple-600 text-white' : 'bg-[#0a0a0a] border-gray-700 text-gray-400 hover:border-gray-500'}`}
+                    >
+                      Türkçe
+                    </button>
+                  </div>
+                </div>
+
                <div className="border-t border-gray-800 pt-4">
-                 <label className="block text-xs text-gray-400 mb-2 uppercase font-bold">Target Output Resolution</label>
+                 <label className="block text-xs text-gray-400 mb-2 uppercase font-bold">{t('resolution')}</label>
                  <div className="grid grid-cols-2 gap-2">
                    <div>
-                      <span className="text-[10px] text-gray-500 block mb-1">Width (px)</span>
+                      <span className="text-[10px] text-gray-500 block mb-1">{t('width')}</span>
                       <input 
                         type="number" 
-                        placeholder="Default: 1000"
+                        placeholder={t('previewPlaceholder')}
                         className="w-full bg-[#0a0a0a] border border-gray-700 rounded p-2 text-sm focus:border-purple-500 outline-none text-white"
                         value={targetWidth}
                         onChange={(e) => setTargetWidth(e.target.value ? Number(e.target.value) : "")}
                       />
                    </div>
                    <div>
-                      <span className="text-[10px] text-gray-500 block mb-1">Height (px)</span>
+                      <span className="text-[10px] text-gray-500 block mb-1">{t('height')}</span>
                       <input 
                         type="number" 
-                        placeholder="Auto if empty"
+                        placeholder={t('autoEmpty')}
                         className="w-full bg-[#0a0a0a] border border-gray-700 rounded p-2 text-sm focus:border-purple-500 outline-none text-white"
                         value={targetHeight}
                         onChange={(e) => setTargetHeight(e.target.value ? Number(e.target.value) : "")}
@@ -849,12 +1041,12 @@ const App = () => {
                    </div>
                  </div>
                  <p className="text-[10px] text-gray-500 mt-2">
-                   If both are set, the crop tool will lock to this aspect ratio. If only width is set, height will scale automatically.
+                   {t('resHelp')}
                  </p>
                </div>
 
                <div className="border-t border-gray-800 pt-4">
-                  <label className="block text-xs text-gray-400 mb-2 uppercase font-bold">Custom Toolbar Colors</label>
+                  <label className="block text-xs text-gray-400 mb-2 uppercase font-bold">{t('customColors')}</label>
                   <div className="flex gap-2 flex-wrap">
                     {customColors.map((color, idx) => (
                       <div key={idx} className="flex flex-col items-center gap-1">
@@ -868,7 +1060,7 @@ const App = () => {
                       </div>
                     ))}
                   </div>
-                  <p className="text-[10px] text-gray-500 mt-1">These colors appear as buttons in your chat editor.</p>
+                  <p className="text-[10px] text-gray-500 mt-1">{t('colorsHelp')}</p>
                </div>
              </div>
 
@@ -877,7 +1069,7 @@ const App = () => {
                  onClick={() => setIsSettingsOpen(false)}
                  className="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded text-sm font-bold flex items-center gap-2"
                >
-                 <Check size={16} /> Done
+                 <Check size={16} /> {t('done')}
                </button>
              </div>
           </div>
@@ -891,7 +1083,7 @@ const App = () => {
           {/* Step 1: Image */}
           <section>
             <h2 className="text-sm font-semibold text-gray-400 mb-3 flex items-center gap-2">
-              <ImageIcon size={16} /> 1. UPLOAD IMAGE
+              <ImageIcon size={16} /> {t('uploadStep')}
             </h2>
             <div className="border-2 border-dashed border-gray-700 rounded-lg p-6 text-center hover:border-purple-500 transition-colors cursor-pointer relative group">
               <input 
@@ -901,7 +1093,7 @@ const App = () => {
                 className="absolute inset-0 opacity-0 cursor-pointer"
               />
               <Upload className="mx-auto text-gray-500 mb-2 group-hover:text-purple-400" />
-              <p className="text-xs text-gray-400">Paste (Ctrl+V), Drag & Drop or Click</p>
+              <p className="text-xs text-gray-400">{t('uploadHelp')}</p>
             </div>
 
             {originalImage && (
@@ -916,7 +1108,7 @@ const App = () => {
                    }`}
                 >
                   <CropIcon size={14} />
-                  Manual Crop & Resize
+                  {t('manualCrop')}
                 </button>
                 
                 {statusMsg && <p className="text-[10px] text-gray-500 mt-1 text-center truncate">{statusMsg}</p>}
@@ -924,33 +1116,89 @@ const App = () => {
             )}
           </section>
 
+          {/* Step 1.5: Image Adjustments */}
+          {originalImage && !isManualCropping && (
+             <section>
+                <div className="flex justify-between items-center mb-2">
+                   <h2 className="text-sm font-semibold text-gray-400 flex items-center gap-2">
+                     <Sliders size={16} /> {t('imageAdjustments')}
+                   </h2>
+                   <button 
+                     onClick={resetImageAdjustments} 
+                     className="text-[10px] text-purple-400 hover:text-purple-300 flex items-center gap-1"
+                   >
+                     <RotateCcw size={10} /> {t('reset')}
+                   </button>
+                </div>
+                
+                <div className="space-y-3 p-3 bg-[#0f0f0f] border border-gray-700 rounded">
+                   <div>
+                     <div className="flex justify-between text-[10px] text-gray-400 mb-1">
+                       <span>{t('brightness')}</span>
+                       <span>{imgBrightness}%</span>
+                     </div>
+                     <input 
+                       type="range" min="0" max="200" 
+                       value={imgBrightness}
+                       onChange={(e) => setImgBrightness(Number(e.target.value))}
+                       className="w-full accent-purple-600 h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+                     />
+                   </div>
+                   <div>
+                     <div className="flex justify-between text-[10px] text-gray-400 mb-1">
+                       <span>{t('contrast')}</span>
+                       <span>{imgContrast}%</span>
+                     </div>
+                     <input 
+                       type="range" min="0" max="200" 
+                       value={imgContrast}
+                       onChange={(e) => setImgContrast(Number(e.target.value))}
+                       className="w-full accent-purple-600 h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+                     />
+                   </div>
+                   <div>
+                     <div className="flex justify-between text-[10px] text-gray-400 mb-1">
+                       <span>{t('saturation')}</span>
+                       <span>{imgSaturation}%</span>
+                     </div>
+                     <input 
+                       type="range" min="0" max="200" 
+                       value={imgSaturation}
+                       onChange={(e) => setImgSaturation(Number(e.target.value))}
+                       className="w-full accent-purple-600 h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+                     />
+                   </div>
+                </div>
+             </section>
+          )}
+
           {/* Step 2: Chatlog */}
           <section className="flex-1 flex flex-col min-h-0">
             <h2 className="text-sm font-semibold text-gray-400 mb-3 flex items-center gap-2">
-              <TypeIcon size={16} /> 2. CHATLOG
+              <TypeIcon size={16} /> {t('chatStep')}
             </h2>
             
             <div className="flex gap-2 mb-2">
                <label className="flex-1 bg-[#2a2a2a] hover:bg-[#333] border border-gray-700 rounded py-1.5 text-xs flex items-center justify-center gap-2 cursor-pointer transition-colors">
-                  <Layers size={12} /> Load .txt
+                  <Layers size={12} /> {t('loadTxt')}
                   <input type="file" accept=".txt" className="hidden" onChange={handleChatLogUpload} />
                </label>
                <button 
                   onClick={() => setShowFilterInput(!showFilterInput)}
                   className={`flex-1 border border-gray-700 rounded py-1.5 text-xs flex items-center justify-center gap-2 transition-colors ${showFilterInput ? 'bg-purple-900/50 border-purple-500 text-purple-200' : 'bg-[#2a2a2a] hover:bg-[#333]'}`}
                >
-                  <Sparkles size={12} /> AI Filter
+                  <Sparkles size={12} /> {t('aiFilter')}
                </button>
             </div>
 
             {/* AI Filter Input Area */}
             {showFilterInput && (
               <div className="mb-2 p-2 bg-purple-900/20 border border-purple-500/30 rounded animate-in fade-in slide-in-from-top-2">
-                <label className="text-[10px] text-purple-300 block mb-1">What should I keep/remove?</label>
+                <label className="text-[10px] text-purple-300 block mb-1">{t('filterLabel')}</label>
                 <div className="flex gap-2">
                   <input 
                     type="text"
-                    placeholder="Ex: Remove OOC logs..."
+                    placeholder={t('filterPlaceholder')}
                     className="flex-1 bg-[#0f0f0f] border border-gray-700 rounded px-2 py-1 text-xs focus:border-purple-500 outline-none"
                     value={filterInstruction}
                     onChange={(e) => setFilterInstruction(e.target.value)}
@@ -961,7 +1209,7 @@ const App = () => {
                     disabled={isFiltering}
                     className="bg-purple-600 hover:bg-purple-500 text-white px-2 rounded text-xs disabled:opacity-50"
                   >
-                    {isFiltering ? <div className="animate-spin w-3 h-3 border-2 border-white border-t-transparent rounded-full"></div> : "Go"}
+                    {isFiltering ? <div className="animate-spin w-3 h-3 border-2 border-white border-t-transparent rounded-full"></div> : t('go')}
                   </button>
                 </div>
               </div>
@@ -1007,7 +1255,7 @@ const App = () => {
             <textarea
               ref={chatInputRef}
               className="w-full flex-1 bg-[#0f0f0f] border border-gray-700 rounded rounded-t-none p-3 text-xs font-mono text-gray-300 focus:outline-none focus:border-purple-500 resize-none mb-2"
-              placeholder="Paste chatlog here..."
+              placeholder={t('chatPlaceholder')}
               value={chatInput}
               onChange={(e) => {
                 setChatInput(e.target.value);
@@ -1017,14 +1265,14 @@ const App = () => {
               onClick={handleProcessChat}
               className="w-full py-2 bg-[#2a2a2a] hover:bg-[#333] border border-gray-700 rounded text-gray-300 text-xs font-medium transition-colors"
             >
-              Render Chat
+              {t('renderChat')}
             </button>
 
             {/* Style Controls */}
             <div className="mt-4 space-y-3">
                <div className="grid grid-cols-2 gap-2">
                  <div className="col-span-2">
-                    <label className="text-[10px] text-gray-500 uppercase block mb-1">Font</label>
+                    <label className="text-[10px] text-gray-500 uppercase block mb-1">{t('font')}</label>
                     <select 
                        value={fontFamily}
                        onChange={(e) => setFontFamily(e.target.value)}
@@ -1036,7 +1284,7 @@ const App = () => {
                     </select>
                  </div>
                  <div>
-                   <label className="text-[10px] text-gray-500 uppercase block mb-1">Size (px)</label>
+                   <label className="text-[10px] text-gray-500 uppercase block mb-1">{t('size')}</label>
                    <input 
                       type="number" 
                       value={fontSize} 
@@ -1045,7 +1293,7 @@ const App = () => {
                    />
                  </div>
                  <div>
-                   <label className="text-[10px] text-gray-500 uppercase block mb-1">Line Height</label>
+                   <label className="text-[10px] text-gray-500 uppercase block mb-1">{t('lineHeight')}</label>
                    <input 
                       type="number" 
                       value={lineHeight} 
@@ -1057,7 +1305,7 @@ const App = () => {
 
                <div>
                  <label className="text-[10px] text-gray-500 uppercase block mb-1 flex justify-between">
-                   <span>Outline Strength</span>
+                   <span>{t('outlineStrength')}</span>
                    <span className="text-white">{strokeWidth}</span>
                  </label>
                  <input 
@@ -1081,7 +1329,7 @@ const App = () => {
                      onChange={(e) => setFontBold(e.target.checked)}
                      className="w-3 h-3 rounded border-gray-700 bg-[#0f0f0f] text-purple-600 focus:ring-purple-500 focus:ring-offset-0 focus:ring-1"
                    />
-                   <label htmlFor="boldToggle" className="text-xs text-gray-400 cursor-pointer select-none">Bold</label>
+                   <label htmlFor="boldToggle" className="text-xs text-gray-400 cursor-pointer select-none">{t('bold')}</label>
                  </div>
                  
                  <div className="flex items-center gap-2">
@@ -1092,7 +1340,7 @@ const App = () => {
                      onChange={(e) => setTextBackground(e.target.checked)}
                      className="w-3 h-3 rounded border-gray-700 bg-[#0f0f0f] text-purple-600 focus:ring-purple-500 focus:ring-offset-0 focus:ring-1"
                    />
-                   <label htmlFor="bgToggle" className="text-xs text-gray-400 cursor-pointer select-none">Black Background</label>
+                   <label htmlFor="bgToggle" className="text-xs text-gray-400 cursor-pointer select-none">{t('blackBg')}</label>
                  </div>
                </div>
             </div>
@@ -1116,7 +1364,7 @@ const App = () => {
                   className="flex-[2] py-2 bg-green-700 hover:bg-green-600 text-white rounded font-bold flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-green-900/20 text-sm"
                 >
                   <Download size={16} />
-                  Export
+                  {t('export')}
                 </button>
              </div>
           </section>
@@ -1130,19 +1378,19 @@ const App = () => {
             <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm">
               <div className="absolute top-4 z-50 flex gap-4 bg-[#1a1a1a] p-2 rounded-lg border border-gray-700 shadow-2xl">
                 <div className="text-white text-sm font-bold flex items-center gap-2 px-2">
-                  <CropIcon size={16} className="text-purple-400"/> Crop Mode
+                  <CropIcon size={16} className="text-purple-400"/> {t('cropMode')}
                 </div>
                 <button 
                   onClick={applyManualCrop} 
                   className="bg-purple-600 hover:bg-purple-500 text-white px-3 py-1 rounded text-xs font-bold flex items-center gap-1"
                 >
-                  <Check size={12} /> Apply
+                  <Check size={12} /> {t('apply')}
                 </button>
                 <button 
                   onClick={() => setIsManualCropping(false)} 
                   className="bg-red-600 hover:bg-red-500 text-white px-3 py-1 rounded text-xs font-bold flex items-center gap-1"
                 >
-                   <X size={12} /> Cancel
+                   <X size={12} /> {t('cancel')}
                 </button>
               </div>
               
@@ -1176,14 +1424,14 @@ const App = () => {
                   />
                 )}
               </div>
-              <p className="text-gray-400 text-xs mt-4">Drag to select. {targetWidth && targetHeight ? "Aspect ratio is locked." : "Freeform crop."}</p>
+              <p className="text-gray-400 text-xs mt-4">{t('dragSelect')} {targetWidth && targetHeight ? t('aspectLocked') : t('freeform')}</p>
             </div>
           )}
 
           {!processedImage && !originalImage && !isManualCropping && (
              <div className="text-gray-600 flex flex-col items-center pointer-events-none">
                <Layers size={48} className="mb-4 opacity-20" />
-               <p>Drag & Drop or Paste Image Here</p>
+               <p>{t('emptyState')}</p>
              </div>
           )}
 
@@ -1200,6 +1448,9 @@ const App = () => {
                    src={processedImage} 
                    alt="Processed" 
                    className="block max-w-full max-h-[80vh] object-contain border border-gray-800"
+                   style={{
+                      filter: `brightness(${imgBrightness}%) contrast(${imgContrast}%) saturate(${imgSaturation}%)`
+                   }}
                    draggable={false}
                  />
                ) : originalImage ? (
@@ -1208,6 +1459,9 @@ const App = () => {
                    src={originalImage} 
                    alt="Original" 
                    className="block max-w-full max-h-[80vh] object-contain border border-gray-800"
+                   style={{
+                      filter: `brightness(${imgBrightness}%) contrast(${imgContrast}%) saturate(${imgSaturation}%)`
+                   }}
                    draggable={false}
                  />
                ) : null}
@@ -1241,7 +1495,8 @@ const App = () => {
                            paintOrder: 'stroke fill',
                            backgroundColor: textBackground ? 'black' : 'transparent'
                          }}
-                         className={`whitespace-pre-wrap ${textBackground ? 'inline-block w-fit px-0.5' : ''}`}
+                         // CHANGED: Use block and w-fit to stack lines correctly without gaps
+                         className={`whitespace-pre-wrap ${textBackground ? 'block w-fit px-0.5' : ''}`}
                        >
                          {/* Render Preview with simple HTML replacements */}
                          {renderPreviewLine(line.text)}
