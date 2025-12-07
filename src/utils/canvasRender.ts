@@ -86,11 +86,16 @@ export const drawWrappedRichText = (
     const flushLine = () => {
         if (lineBuffer.length === 0) return;
 
+        // Ensure vertical centering matches CSS behavior
+        ctx.textBaseline = 'middle';
+        const textMiddleY = currentY + (lineHeight / 2);
+
         // 1. Draw Backgrounds (Behind everything)
         let drawX = x;
         lineBuffer.forEach(w => {
             if (hasBackground || w.isRedacted) {
                 ctx.fillStyle = "black";
+                // Background draws from top-left, covering the full line height
                 ctx.fillRect(drawX, currentY, w.width, lineHeight);
             }
             drawX += w.width;
@@ -105,7 +110,7 @@ export const drawWrappedRichText = (
                 ctx.strokeStyle = "black";
                 ctx.lineJoin = "round";
                 ctx.miterLimit = 2;
-                ctx.strokeText(w.text, drawX, currentY);
+                ctx.strokeText(w.text, drawX, textMiddleY);
             }
             drawX += w.width;
         });
@@ -116,7 +121,7 @@ export const drawWrappedRichText = (
             if (!w.isRedacted && w.text.trim()) {
                 ctx.font = w.font;
                 ctx.fillStyle = w.fill;
-                ctx.fillText(w.text, drawX, currentY);
+                ctx.fillText(w.text, drawX, textMiddleY);
             }
             drawX += w.width;
         });

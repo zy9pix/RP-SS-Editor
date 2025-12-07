@@ -80,15 +80,18 @@ const Canvas = () => {
                     ctx.fillRect(0, drawYOffset, canvasWidth, img.height);
                 }
 
+                // Draw Text Layers (Correctly positioned & scaled)
                 const previewImg = document.getElementById("preview-image") as HTMLImageElement;
                 if (previewImg) {
                     const rect = previewImg.getBoundingClientRect();
+                    // Uniform scaling based on width to avoid height distortion from cinema bars
                     const scaleX = img.width / rect.width;
-                    const scaleY = img.height / rect.height;
+                    const scaleY = scaleX;
+
                     const baseFontSize = fontSize * scaleX;
                     const baseFontString = `${fontBold ? "bold " : ""}${baseFontSize}px ${fontFamily}, sans-serif`;
 
-                    ctx.textBaseline = "top";
+                    ctx.textBaseline = 'middle';
 
                     textLayers.forEach(layer => {
                         let currentY = (layer.y * scaleY) + drawYOffset;
