@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { X, Check, type LucideIcon, Sparkles } from 'lucide-react';
 import { useEditor } from '@/src/context/EditorContext';
 import { GoogleGenAI } from "@google/genai";
-import { parseChatLog } from '@/src/utils/chatParser';
+import { parseChatLog, cleanChatLog } from '@/src/utils/chatParser';
 import FormattingToolbar from '../editor/FormattingToolbar';
 
 const TextLayerModal = () => {
@@ -40,6 +40,13 @@ const TextLayerModal = () => {
     const handleClose = () => {
         setIsTextModalOpen(false);
     };
+
+    const handleParseClean = () => {
+        // Run the robust cleaner
+        const cleaned = cleanChatLog(localText);
+        setLocalText(cleaned);
+    };
+
 
     const handleAIFilter = async () => {
         if (!localText.trim()) return;
@@ -115,6 +122,12 @@ const TextLayerModal = () => {
                             className={`flex-1 border border-gray-700 rounded py-2 text-xs flex items-center justify-center gap-2 transition-colors ${showFilterInput ? 'bg-purple-900/50 border-purple-500 text-purple-200' : 'bg-[#2a2a2a] hover:bg-[#333] text-gray-300'}`}
                         >
                             <Sparkles size={14} /> AI Smart Clean
+                        </button>
+                        <button
+                            onClick={handleParseClean}
+                            className="flex-1 border border-gray-700 rounded py-2 text-xs flex items-center justify-center gap-2 bg-[#2a2a2a] hover:bg-[#333] text-gray-300 transition-colors"
+                        >
+                            <Check size={14} /> Parse / Clean Timestamps
                         </button>
                     </div>
 

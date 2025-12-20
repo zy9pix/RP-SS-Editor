@@ -7,13 +7,12 @@
 // I should update main.tsx to: when pasting text, create a NEW layer instead of updating chatInput.
 import React, { useCallback, useEffect } from "react";
 import { createRoot } from "react-dom/client";
-import { Settings, Scissors } from "lucide-react";
+import { Scissors } from "lucide-react";
 
 import { EditorProvider, useEditor } from "@/src/context/EditorContext";
-import Sidebar from "@/src/components/editor/Sidebar";
-import Canvas from "@/src/components/editor/Canvas";
+import ToolPanel from "@/src/components/editor/ToolPanel";
+import Workspace from "@/src/components/editor/Workspace";
 import SettingsModal from "@/src/components/Modals/SettingsModal";
-// We need the Modal for Text Editing now
 import TextLayerModal from "@/src/components/Modals/TextLayerModal";
 import { parseChatLog } from "@/src/utils/chatParser";
 
@@ -22,23 +21,23 @@ const AppContent = () => {
         t,
         setIsSettingsOpen,
         setOriginalImage, setProcessedImage, setIsManualCropping, setCropSelection, setStatusMsg,
-        addTextLayer, setTextLayers, setIsTextModalOpen, setActiveLayerId
+        setTextLayers, setActiveLayerId
     } = useEditor();
 
     // Helper to add text as layer
     const createLayerFromText = (text: string) => {
-        const newLine = parseChatLog(text);
+        // We do typically just one line group per paste?
         const newLayer = {
             id: Date.now().toString(),
-            lines: newLine,
+            lines: parseChatLog(text),
             text: text,
             x: 50,
             y: 50,
-            hasGradientBg: false
+            hasGradientBg: false,
+            cachedImage: undefined
         };
         setTextLayers(prev => [...prev, newLayer]);
         setActiveLayerId(newLayer.id);
-        // setIsTextModalOpen(true); // Don't auto open modal on paste, just add it
         setStatusMsg(t('textPasted'));
     };
 
@@ -109,25 +108,14 @@ const AppContent = () => {
     }, [handleGlobalPaste, handleGlobalDrop]);
 
     return (
-        <div className="min-h-screen bg-[#121212] text-gray-200 font-sans flex flex-col">
-            {/* Header */}
-            <header className="bg-[#1e1e1e] border-b border-gray-800 p-4 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                    <Scissors className="text-purple-400" />
-                    <h1 className="text-xl font-bold text-white">{t('appTitle')}</h1>
-                </div>
-                <button
-                    onClick={() => setIsSettingsOpen(true)}
-                    className="text-gray-400 hover:text-white transition-colors p-2 rounded hover:bg-gray-700"
-                    title={t('settings')}
-                >
-                    <Settings size={20} />
-                </button>
-            </header>
+        <div className="h-screen w-screen bg-[#050505] text-gray-200 font-sans flex overflow-hidden">
 
-            <main className="flex-1 flex flex-col md:flex-row overflow-hidden relative">
-                <Sidebar />
-                <Canvas />
+            {/* Left Tool Panel (Sidebar) */}
+            <ToolPanel />
+
+            {/* Main Workspace */}
+            <main className="flex-1 flex flex-col relative min-w-0">
+                <Workspace />
             </main>
 
             <SettingsModal />

@@ -10,6 +10,7 @@ export interface TextLayer {
     x: number;
     y: number;
     hasGradientBg: boolean;
+    cachedImage?: string; // Data URL of the rendered PNG
 }
 
 export interface ResolutionPreset {
@@ -222,7 +223,8 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
             text: "",
             x: 20,
             y: 20,
-            hasGradientBg: false
+            hasGradientBg: false,
+            cachedImage: undefined
         };
         setTextLayers(prev => [...prev, newLayer]);
         setActiveLayerId(newLayer.id);
