@@ -63,36 +63,36 @@ const ToolPanel = () => {
                 {originalImage && (
                     <section className="space-y-3">
                         <div className="flex items-center justify-between text-xs font-bold text-gray-500 uppercase tracking-wider">
-                            <span>Image Tools</span>
+                            <span>{t('sectionImageTools')}</span>
                         </div>
 
                         <div className="grid grid-cols-2 gap-2">
                             <button
                                 onClick={() => setIsCinematic(!isCinematic)}
                                 className={`py-3 px-2 rounded flex flex-col items-center justify-center gap-1 font-medium text-xs transition-all border ${isCinematic
-                                        ? "bg-[#CFD71B]/10 text-[#CFD71B] border-[#CFD71B]/50"
-                                        : "bg-[#141414] hover:bg-[#1a1a1a] text-gray-400 border-transparent"
+                                    ? "bg-[#CFD71B]/10 text-[#CFD71B] border-[#CFD71B]/50"
+                                    : "bg-[#141414] hover:bg-[#1a1a1a] text-gray-400 border-transparent"
                                     }`}
                             >
                                 <Clapperboard size={18} />
-                                <span>Cinema</span>
+                                <span>{t('btnCinema')}</span>
                             </button>
                             <button
                                 onClick={() => setIsLinearGradient(!isLinearGradient)}
                                 className={`py-3 px-2 rounded flex flex-col items-center justify-center gap-1 font-medium text-xs transition-all border ${isLinearGradient
-                                        ? "bg-[#CFD71B]/10 text-[#CFD71B] border-[#CFD71B]/50"
-                                        : "bg-[#141414] hover:bg-[#1a1a1a] text-gray-400 border-transparent"
+                                    ? "bg-[#CFD71B]/10 text-[#CFD71B] border-[#CFD71B]/50"
+                                    : "bg-[#141414] hover:bg-[#1a1a1a] text-gray-400 border-transparent"
                                     }`}
                             >
                                 <Minimize size={18} className="rotate-180" />
-                                <span>Gradient</span>
+                                <span>{t('btnGradient')}</span>
                             </button>
                         </div>
 
                         {/* Crop Presets */}
                         {!isManualCropping && (
                             <div className="space-y-2 pt-2">
-                                <label className="text-[10px] text-gray-600 uppercase font-bold">Crop Presets</label>
+                                <label className="text-[10px] text-gray-600 uppercase font-bold">{t('lblCropPresets')}</label>
                                 <div className="grid grid-cols-3 gap-1">
                                     {resolutionPresets.slice(0, 3).map((preset, idx) => (
                                         <button
@@ -117,7 +117,7 @@ const ToolPanel = () => {
                             className="w-full flex items-center justify-between p-3 hover:bg-[#1a1a1a] transition-colors"
                         >
                             <span className="text-xs font-bold text-gray-300 flex items-center gap-2">
-                                <ImageIcon size={14} className="text-[#CFD71B]" /> Adjustments
+                                <ImageIcon size={14} className="text-[#CFD71B]" /> {t('btnAdjustments')}
                             </span>
                             {isAdjustmentsOpen ? <ChevronUp size={14} className="text-gray-500" /> : <ChevronDown size={14} className="text-gray-500" />}
                         </button>
@@ -133,14 +133,14 @@ const ToolPanel = () => {
                 <section className="flex flex-col gap-3 min-h-[200px]">
                     <div className="flex items-center justify-between">
                         <div className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2">
-                            <Layers size={14} /> Layers
+                            <Layers size={14} /> {t('sectionLayers')}
                         </div>
                         <button
                             onClick={addTextLayer}
                             style={{ backgroundColor: '#CFD71B', color: 'black' }}
                             className="text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1 hover:brightness-110 transition-all shadow-[0_0_15px_rgba(207,215,27,0.2)]"
                         >
-                            <Plus size={12} /> New Text
+                            <Plus size={12} /> {t('btnNewText')}
                         </button>
                     </div>
 
@@ -148,15 +148,15 @@ const ToolPanel = () => {
                         {textLayers.length === 0 && (
                             <div className="h-20 flex flex-col items-center justify-center text-gray-600 text-xs">
                                 <Layers size={20} className="mb-2 opacity-50" />
-                                <span>No layers yet</span>
+                                <span>{t('noLayers')}</span>
                             </div>
                         )}
                         {textLayers.map((layer, idx) => (
                             <div
                                 key={layer.id}
                                 className={`flex items-center justify-between p-2 rounded cursor-pointer transition-all border ${activeLayerId === layer.id
-                                        ? 'bg-[#1a1a1a] border-[#CFD71B]/30'
-                                        : 'hover:bg-[#161616] border-transparent'
+                                    ? 'bg-[#1a1a1a] border-[#CFD71B]/30'
+                                    : 'hover:bg-[#161616] border-transparent'
                                     }`}
                                 onClick={() => setActiveLayerId(layer.id)}
                             >
@@ -165,7 +165,7 @@ const ToolPanel = () => {
                                         {idx + 1}
                                     </span>
                                     <span className={`text-xs truncate ${activeLayerId === layer.id ? 'text-gray-200' : 'text-gray-500'}`}>
-                                        {layer.lines.length > 0 ? layer.lines[0].text : "(Empty)"}
+                                        {layer.lines.length > 0 ? layer.lines[0].text : t('emptyLayer')}
                                     </span>
                                 </div>
                                 <div className="flex items-center">
@@ -189,7 +189,7 @@ const ToolPanel = () => {
 
                 {/* 4. Text Properties (Always visible, applying to GLOBAL) */}
                 <section className="space-y-4 pt-4 border-t border-[#1a1a1a]">
-                    <h3 className="text-[10px] uppercase font-bold text-gray-500">Global Text Style</h3>
+                    <h3 className="text-[10px] uppercase font-bold text-gray-500">{t('sectionGlobalStyle')}</h3>
 
                     <div className="space-y-3">
                         {/* Font Family */}
@@ -209,7 +209,7 @@ const ToolPanel = () => {
                         {/* Size & Line Height */}
                         <div className="grid grid-cols-2 gap-3">
                             <div>
-                                <label className="text-[9px] text-gray-600 uppercase mb-1 block">Size</label>
+                                <label className="text-[9px] text-gray-600 uppercase mb-1 block">{t('lblSize')}</label>
                                 <input
                                     type="number"
                                     value={fontSize}
@@ -218,7 +218,7 @@ const ToolPanel = () => {
                                 />
                             </div>
                             <div>
-                                <label className="text-[9px] text-gray-600 uppercase mb-1 block">Spacing</label>
+                                <label className="text-[9px] text-gray-600 uppercase mb-1 block">{t('lblSpacing')}</label>
                                 <input
                                     type="number"
                                     value={lineHeight}
@@ -231,7 +231,7 @@ const ToolPanel = () => {
                         {/* Stroke */}
                         <div>
                             <div className="flex justify-between mb-1">
-                                <label className="text-[9px] text-gray-600 uppercase">Outline</label>
+                                <label className="text-[9px] text-gray-600 uppercase">{t('lblOutline')}</label>
                                 <span className="text-[9px] text-gray-400">{strokeWidth}px</span>
                             </div>
                             <input
@@ -248,11 +248,11 @@ const ToolPanel = () => {
                         <div className="flex gap-4">
                             <label className="flex items-center gap-2 cursor-pointer">
                                 <input type="checkbox" checked={fontBold} onChange={(e) => setFontBold(e.target.checked)} className="accent-[#CFD71B] bg-[#141414]" />
-                                <span className="text-xs text-gray-400">Bold</span>
+                                <span className="text-xs text-gray-400">{t('lblBold')}</span>
                             </label>
                             <label className="flex items-center gap-2 cursor-pointer">
                                 <input type="checkbox" checked={textBackground} onChange={(e) => setTextBackground(e.target.checked)} className="accent-[#CFD71B] bg-[#141414]" />
-                                <span className="text-xs text-gray-400">Background</span>
+                                <span className="text-xs text-gray-400">{t('lblBackground')}</span>
                             </label>
                         </div>
                     </div>

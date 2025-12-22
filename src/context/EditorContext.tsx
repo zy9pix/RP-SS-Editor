@@ -11,6 +11,8 @@ export interface TextLayer {
     y: number;
     hasGradientBg: boolean;
     cachedImage?: string; // Data URL of the rendered PNG
+    scale?: number;
+    maxWidth?: number;
 }
 
 export interface ResolutionPreset {
