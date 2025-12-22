@@ -122,35 +122,7 @@ const SettingsModal = () => {
                         </div>
                     </div>
 
-                    {/* Custom Resolution */}
-                    <div className="border-t border-[#1a1a1a] pt-4">
-                        <label className="block text-xs text-gray-500 mb-2 uppercase font-bold tracking-wider">{t('resolution')}</label>
-                        <div className="grid grid-cols-2 gap-2">
-                            <div>
-                                <span className="text-[10px] text-gray-500 block mb-1">{t('width')}</span>
-                                <input
-                                    type="number"
-                                    placeholder={t('previewPlaceholder')}
-                                    className="w-full bg-[#141414] border border-[#1a1a1a] rounded p-2 text-sm focus:border-[#CFD71B] outline-none text-white"
-                                    value={targetWidth}
-                                    onChange={(e) => setTargetWidth(e.target.value ? Number(e.target.value) : "")}
-                                />
-                            </div>
-                            <div>
-                                <span className="text-[10px] text-gray-500 block mb-1">{t('height')}</span>
-                                <input
-                                    type="number"
-                                    placeholder={t('autoEmpty')}
-                                    className="w-full bg-[#141414] border border-[#1a1a1a] rounded p-2 text-sm focus:border-[#CFD71B] outline-none text-white"
-                                    value={targetHeight}
-                                    onChange={(e) => setTargetHeight(e.target.value ? Number(e.target.value) : "")}
-                                />
-                            </div>
-                        </div>
-                        <p className="text-[10px] text-gray-500 mt-2">
-                            {t('resHelp')}
-                        </p>
-                    </div>
+
 
                     {/* Colors */}
                     <div className="border-t border-[#1a1a1a] pt-4">
