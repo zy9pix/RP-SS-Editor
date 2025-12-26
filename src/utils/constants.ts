@@ -22,7 +22,7 @@ export const DEFAULT_CUSTOM_COLORS = [
 ];
 
 export const FONT_OPTIONS = [
-    { name: "Helvetica", value: "Helvetica" },
+    { name: "Helvetica (Arimo)", value: "Arimo" },
     { name: "Roboto", value: "Roboto" },
     { name: "Open Sans", value: "Open Sans" },
     { name: "Inter", value: "Inter" },

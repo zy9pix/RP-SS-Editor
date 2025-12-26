@@ -11,12 +11,15 @@ const SettingsModal = () => {
         targetHeight, setTargetHeight,
         customColors, setCustomColors,
         resolutionPresets, setResolutionPresets,
+        customFonts, addCustomFont, removeCustomFont, imgbbApiKey, setImgbbApiKey,
         t
     } = useEditor();
 
     const [newPresetW, setNewPresetW] = useState(1920);
     const [newPresetH, setNewPresetH] = useState(1080);
     const [newPresetName, setNewPresetName] = useState("");
+    const [newFontName, setNewFontName] = useState("");
+    const [newFontUrl, setNewFontUrl] = useState("");
 
     if (!isSettingsOpen) return null;
 
@@ -41,6 +44,27 @@ const SettingsModal = () => {
         const newPresets = [...resolutionPresets];
         newPresets.splice(idx, 1);
         setResolutionPresets(newPresets);
+    };
+
+    const handleAddFontUrl = () => {
+        if (!newFontName || !newFontUrl) return;
+        addCustomFont(newFontName, newFontUrl);
+        setNewFontName("");
+        setNewFontUrl("");
+    };
+
+    const handleFontUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            const result = ev.target?.result as string;
+            // Use filename as default name if prompt? just use filename without ext
+            const name = file.name.split('.')[0];
+            addCustomFont(name, result);
+        };
+        reader.readAsDataURL(file);
     };
 
     return (
@@ -94,7 +118,7 @@ const SettingsModal = () => {
                     <div className="border-t border-[#1a1a1a] pt-4">
                         <label className="block text-xs font-bold text-gray-500 uppercase mb-2 tracking-wider">Resolution Presets</label>
                         <div className="space-y-2 max-h-40 overflow-y-auto mb-2 pr-1 scrollbar-thin">
-                            {resolutionPresets.map((preset, idx) => (
+                            {Array.isArray(resolutionPresets) && resolutionPresets.map((preset, idx) => (
                                 <div key={idx} className="flex items-center justify-between bg-[#141414] p-2 rounded border border-[#1a1a1a] hover:border-gray-700 transition-colors">
                                     <span className="text-xs text-gray-300">{preset.label} <span className="text-gray-500">({preset.width}x{preset.height})</span></span>
                                     <div className="flex gap-2">
@@ -123,6 +147,80 @@ const SettingsModal = () => {
                     </div>
 
 
+
+
+                    {/* ImgBB Integration */}
+                    <div className="border-t border-[#1a1a1a] pt-4">
+                        <label className="block text-xs text-gray-500 mb-2 uppercase font-bold tracking-wider">ImgBB Integration</label>
+                        <div>
+                            <input
+                                type="text"
+                                placeholder="ImgBB API Key"
+                                className="w-full bg-[#141414] border border-[#1a1a1a] rounded p-2 text-xs text-gray-300 focus:border-[#CFD71B] outline-none mb-2"
+                                value={imgbbApiKey}
+                                onChange={(e) => setImgbbApiKey(e.target.value)}
+                            />
+                            <p className="text-[10px] text-gray-500">
+                                {t('imgbbApiKeyHelp') || "Enter your ImgBB API Key to enable uploads."}
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* Custom Fonts */}
+                    <div className="border-t border-[#1a1a1a] pt-4">
+                        <label className="block text-xs text-gray-500 mb-2 uppercase font-bold tracking-wider">Custom Fonts</label>
+
+                        {/* List Existing Custom Fonts */}
+                        {Array.isArray(customFonts) && customFonts.length > 0 && (
+                            <div className="flex flex-wrap gap-2 mb-3">
+                                {customFonts.map((font) => (
+                                    <div key={font.name} className="bg-[#141414] border border-[#1a1a1a] rounded px-2 py-1 flex items-center gap-2">
+                                        <span className="text-xs text-gray-300">{font.name}</span>
+                                        <button onClick={() => removeCustomFont(font.name)} className="text-gray-600 hover:text-red-400">
+                                            <Trash2 size={10} />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {/* Add New Font */}
+                        <div className="space-y-2">
+                            <div className="flex gap-2">
+                                <input
+                                    type="text"
+                                    placeholder="Font Name"
+                                    value={newFontName}
+                                    onChange={(e) => setNewFontName(e.target.value)}
+                                    className="bg-[#141414] border border-[#1a1a1a] rounded px-2 py-1.5 text-xs flex-1 focus:border-[#CFD71B] outline-none text-gray-300"
+                                />
+                                <input
+                                    type="text"
+                                    placeholder="Font URL (e.g. Google Fonts CSS)"
+                                    value={newFontUrl}
+                                    onChange={(e) => setNewFontUrl(e.target.value)}
+                                    className="bg-[#141414] border border-[#1a1a1a] rounded px-2 py-1.5 text-xs flex-[2] focus:border-[#CFD71B] outline-none text-gray-300"
+                                />
+                                <button
+                                    onClick={handleAddFontUrl}
+                                    disabled={!newFontName || !newFontUrl}
+                                    className="bg-[#1a1a1a] hover:bg-[#222] text-gray-300 px-3 rounded text-xs border border-[#1a1a1a] disabled:opacity-50"
+                                >
+                                    Add
+                                </button>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                                <span className="text-[10px] text-gray-500 uppercase font-bold">OR Upload .TTF/.OTF</span>
+                                <input
+                                    type="file"
+                                    accept=".ttf,.otf,.woff"
+                                    onChange={handleFontUpload}
+                                    className="text-xs text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-[10px] file:bg-[#1a1a1a] file:text-gray-300 hover:file:bg-[#222]"
+                                />
+                            </div>
+                        </div>
+                    </div>
 
                     {/* Colors */}
                     <div className="border-t border-[#1a1a1a] pt-4">

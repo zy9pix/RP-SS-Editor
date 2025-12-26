@@ -12,16 +12,18 @@ import { Scissors } from "lucide-react";
 import { EditorProvider, useEditor } from "@/src/context/EditorContext";
 import ToolPanel from "@/src/components/editor/ToolPanel";
 import Workspace from "@/src/components/editor/Workspace";
+import HistoryPage from "@/src/components/pages/HistoryPage";
 import SettingsModal from "@/src/components/Modals/SettingsModal";
 import TextLayerModal from "@/src/components/Modals/TextLayerModal";
 import { parseChatLog } from "@/src/utils/chatParser";
+import { Toaster } from "sonner";
 
 const AppContent = () => {
     const {
         t,
         setIsSettingsOpen,
         setOriginalImage, setProcessedImage, setIsManualCropping, setCropSelection, setStatusMsg,
-        setTextLayers, setActiveLayerId
+        setTextLayers, setActiveLayerId, currentView
     } = useEditor();
 
     // Helper to add text as layer
@@ -115,11 +117,12 @@ const AppContent = () => {
 
             {/* Main Workspace */}
             <main className="flex-1 flex flex-col relative min-w-0">
-                <Workspace />
+                {currentView === 'editor' ? <Workspace /> : <HistoryPage />}
             </main>
 
             <SettingsModal />
             <TextLayerModal />
+            <Toaster position="top-center" theme="dark" />
         </div>
     );
 };

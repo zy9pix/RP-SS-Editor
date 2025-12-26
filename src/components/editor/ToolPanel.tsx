@@ -1,16 +1,20 @@
 import React, { useState } from 'react';
 import {
-    ImageIcon, Crop as CropIcon, Layers, Plus, Trash2, Edit, ChevronDown, ChevronUp, Download, Clapperboard, Minimize, Settings as SettingsIcon, Type
+    ImageIcon, Crop as CropIcon, Layers, Plus, Trash2, Edit, ChevronDown, ChevronUp, Download, Clapperboard, Minimize, Settings as SettingsIcon, Type,
+    CloudUpload, History
 } from 'lucide-react';
 import { useEditor } from '@/src/context/EditorContext';
 import ImageAdjustments from './ImageAdjustments';
 import { FONT_OPTIONS } from '@/src/utils/constants';
+// ImgurHistoryModal removed
+import { ImgbbService } from '@/src/services/imgbbService';
+import { toast } from 'sonner';
 
 const ToolPanel = () => {
     const {
         t,
         originalImage, setOriginalImage, setProcessedImage, setIsManualCropping, setCropSelection, setStatusMsg,
-        isProcessing, isManualCropping,
+        isProcessing, setIsProcessing, isManualCropping,
         fontFamily, setFontFamily, fontSize, setFontSize, lineHeight, setLineHeight, strokeWidth, setStrokeWidth,
         fontBold, setFontBold, textBackground, setTextBackground,
         exportFormat, setExportFormat,
@@ -18,10 +22,14 @@ const ToolPanel = () => {
         textLayers, addTextLayer, activeLayerId, setActiveLayerId, removeTextLayer, setIsTextModalOpen,
         isCinematic, setIsCinematic,
         isLinearGradient, setIsLinearGradient,
-        resolutionPresets, setTargetWidth, setTargetHeight
+        resolutionPresets, setTargetWidth, setTargetHeight,
+        imgbbApiKey, addToHistory, customFonts,
+        setCurrentView, exportHandler
     } = useEditor();
 
     const [isAdjustmentsOpen, setIsAdjustmentsOpen] = useState(false);
+    // isHistoryOpen removed
+    const [isUploading, setIsUploading] = useState(false);
 
     // Handlers
     const startCropWithPreset = (w: number, h: number) => {
@@ -34,7 +42,81 @@ const ToolPanel = () => {
     };
 
     const handleExport = async () => {
-        window.dispatchEvent(new CustomEvent("RP_EDITOR_EXPORT"));
+        if (!exportHandler) return;
+
+        setIsProcessing(true);
+        const blob = await exportHandler();
+
+        if (blob) {
+            const url = URL.createObjectURL(blob);
+            const date = new Date();
+            const pad = (n: number) => n.toString().padStart(2, '0');
+            const dateStr = `${pad(date.getHours())}-${pad(date.getMinutes())}-${pad(date.getDate())}-${pad(date.getMonth() + 1)}-${date.getFullYear()}`;
+            const extension = exportFormat || 'png';
+            const filename = `rp-edit-${dateStr}.${extension}`;
+
+            const link = document.createElement("a");
+            link.download = filename;
+            link.href = url;
+            link.click();
+
+            // Cleanup
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+        } else {
+            toast.error(t('exportFailed'));
+        }
+        setIsProcessing(false);
+    };
+
+    const handleImgbbUpload = async () => {
+        if (!imgbbApiKey) {
+            toast.error(t('imgbbApiKeyRequired'));
+            return;
+        }
+
+        setIsUploading(true);
+        try {
+            // Get Image Blob from Workspace via Handler
+            let blob: Blob | null = null;
+            if (exportHandler) {
+                blob = await exportHandler();
+            }
+
+            if (!blob) {
+                toast.error(t('failedToGen'));
+                setIsUploading(false);
+                return;
+            }
+
+            // Upload
+            // Convert Blob to Base64 manually if service expects string, 
+            // OR update service to accept Blob.
+            // Service expects base64 string (data url).
+            const reader = new FileReader();
+            reader.readAsDataURL(blob);
+            reader.onloadend = async () => {
+                const base64data = reader.result as string;
+                if (!base64data) return;
+
+                const result = await ImgbbService.uploadImage(base64data, imgbbApiKey);
+
+                if (result && result.link) {
+                    addToHistory({
+                        id: result.id,
+                        link: result.link,
+                        deletehash: result.deletehash,
+                        date: new Date().toISOString()
+                    });
+                    navigator.clipboard.writeText(result.link);
+                    toast.success(t('uploadSuccess'));
+                }
+                setIsUploading(false);
+            };
+        } catch (error: any) {
+            console.error("Upload failed", error);
+            toast.error(error.message || t('uploadFailed'));
+            setIsUploading(false);
+        }
     };
 
     // --- Active Layer logic ---
@@ -94,11 +176,12 @@ const ToolPanel = () => {
                             <div className="space-y-2 pt-2">
                                 <label className="text-[10px] text-gray-600 uppercase font-bold">{t('lblCropPresets')}</label>
                                 <div className="grid grid-cols-3 gap-1">
-                                    {resolutionPresets.slice(0, 3).map((preset, idx) => (
+                                    {resolutionPresets.slice(0, 6).map((preset, idx) => (
                                         <button
                                             key={idx}
                                             onClick={() => startCropWithPreset(preset.width, preset.height)}
                                             className="bg-[#141414] hover:bg-[#222] text-gray-300 text-[10px] py-1.5 px-1 rounded border border-[#1a1a1a] truncate"
+                                            title={`${preset.width}x${preset.height}`}
                                         >
                                             {preset.label.split(' ')[0]}
                                         </button>
@@ -202,6 +285,13 @@ const ToolPanel = () => {
                                 {FONT_OPTIONS.map(font => (
                                     <option key={font.value} value={font.value}>{font.name}</option>
                                 ))}
+                                {customFonts && customFonts.length > 0 && (
+                                    <optgroup label={t('customFonts') || "Custom Fonts"}>
+                                        {customFonts.map(font => (
+                                            <option key={font.name} value={font.name}>{font.name}</option>
+                                        ))}
+                                    </optgroup>
+                                )}
                             </select>
                             <ChevronDown size={12} className="absolute right-3 top-2.5 text-gray-500 pointer-events-none" />
                         </div>
@@ -260,7 +350,7 @@ const ToolPanel = () => {
             </div>
 
             {/* Footer / Export */}
-            <div className="p-4 bg-[#0d0d0d] border-t border-[#1a1a1a] sticky bottom-0 z-30">
+            <div className="p-4 bg-[#0d0d0d] border-t border-[#1a1a1a] sticky bottom-0 z-30 space-y-2">
                 <div className="flex gap-2">
                     <select
                         value={exportFormat}
@@ -279,6 +369,30 @@ const ToolPanel = () => {
                     >
                         <Download size={16} />
                         {t('export')}
+                    </button>
+                </div>
+
+                {/* ImgBB Buttons */}
+                <div className="flex gap-2">
+                    <button
+                        onClick={handleImgbbUpload}
+                        disabled={isUploading || (!processedImage && !originalImage)}
+                        className="flex-1 bg-[#1a1a1a] hover:bg-[#222] text-gray-300 border border-[#333] py-1.5 rounded text-xs font-bold flex items-center justify-center gap-2 disabled:opacity-50 transition-all"
+                    >
+                        {isUploading ? (
+                            <span className="animate-pulse">Uploading...</span>
+                        ) : (
+                            <>
+                                <CloudUpload size={14} /> Upload to ImgBB
+                            </>
+                        )}
+                    </button>
+                    <button
+                        onClick={() => setCurrentView('history')}
+                        className="px-2 bg-[#1a1a1a] hover:bg-[#222] text-gray-400 border border-[#333] rounded flex items-center justify-center transition-colors"
+                        title="Upload History"
+                    >
+                        <History size={16} />
                     </button>
                 </div>
             </div>

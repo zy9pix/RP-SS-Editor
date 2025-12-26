@@ -21,6 +21,18 @@ export interface ResolutionPreset {
     label: string;
 }
 
+export interface CustomFont {
+    name: string;
+    url: string; // URL or Data URI
+}
+
+export interface ImgurUpload {
+    id: string;
+    link: string;
+    deletehash?: string;
+    date: string;
+}
+
 interface EditorState {
     // App Settings
     language: 'en' | 'tr';
@@ -106,6 +118,24 @@ interface EditorState {
     addTextLayer: () => void;
     updateTextLayer: (id: string, updates: Partial<TextLayer>) => void;
     removeTextLayer: (id: string) => void;
+
+    // ImgBB
+    customFonts: CustomFont[];
+    setCustomFonts: (fonts: CustomFont[]) => void;
+    addCustomFont: (name: string, url: string) => void;
+    removeCustomFont: (name: string) => void;
+
+    imgbbApiKey: string;
+    setImgbbApiKey: (key: string) => void;
+    uploadHistory: ImgurUpload[];
+    addToHistory: (upload: ImgurUpload) => void;
+    clearHistory: () => void;
+
+    // View & Logic
+    currentView: 'editor' | 'history';
+    setCurrentView: (view: 'editor' | 'history') => void;
+    exportHandler: (() => Promise<Blob | null>) | null;
+    setExportHandler: (handler: () => Promise<Blob | null>) => void;
 }
 
 const EditorContext = createContext<EditorState | undefined>(undefined);
@@ -155,6 +185,19 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     const [exportFormat, setExportFormat] = useState<"png" | "jpeg" | "webp">("png");
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
+    // New State: Fonts & ImgBB
+    const [customFonts, setCustomFonts] = useState<CustomFont[]>([]);
+    const [imgbbApiKey, setImgbbApiKey] = useState("");
+    const [uploadHistory, setUploadHistory] = useState<ImgurUpload[]>([]);
+
+    const [currentView, setCurrentView] = useState<'editor' | 'history'>('editor');
+    const [exportHandler, setExportHandlerState] = useState<(() => Promise<Blob | null>) | null>(null);
+
+    // We use a ref mechanism or just state setter for the handler.
+    const setExportHandler = (handler: () => Promise<Blob | null>) => {
+        setExportHandlerState(() => handler);
+    };
+
     // --- Persistence & Effects ---
 
     useEffect(() => {
@@ -187,11 +230,43 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
                 if (config.textBackground !== undefined) setTextBackground(config.textBackground);
                 if (config.customColors) setCustomColors(config.customColors);
                 if (config.exportFormat) setExportFormat(config.exportFormat);
+                if (config.customFonts) setCustomFonts(config.customFonts);
+                if (config.imgbbApiKey) setImgbbApiKey(config.imgbbApiKey); // Use new key
+                // Fallback for migration if needed? Nah user just re-enters.
+                if (config.uploadHistory) setUploadHistory(config.uploadHistory);
             } catch (e) {
                 console.error("Error loading config", e);
             }
         }
     }, []);
+
+    // Inject Custom Fonts
+    useEffect(() => {
+        const styleId = "rp-editor-custom-fonts";
+        let styleTag = document.getElementById(styleId);
+        if (customFonts.length === 0) {
+            if (styleTag) styleTag.remove();
+            return;
+        }
+
+        if (!styleTag) {
+            styleTag = document.createElement("style");
+            styleTag.id = styleId;
+            document.head.appendChild(styleTag);
+        }
+
+        let css = "";
+        customFonts.forEach(font => {
+            css += `
+                @font-face {
+                    font-family: "${font.name}";
+                    src: url("${font.url}");
+                }
+            `;
+        });
+        styleTag.textContent = css;
+
+    }, [customFonts]);
 
     useEffect(() => {
         localStorage.setItem("rp-editor-lang", language);
@@ -208,10 +283,11 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     useEffect(() => {
         const config = {
             fontSize, lineHeight, fontFamily, fontBold, strokeWidth,
-            textBackground, customColors, exportFormat
+            textBackground, customColors, exportFormat,
+            customFonts, imgbbApiKey, uploadHistory
         };
         localStorage.setItem("rp-editor-config", JSON.stringify(config));
-    }, [fontSize, lineHeight, fontFamily, fontBold, strokeWidth, textBackground, customColors, exportFormat]);
+    }, [fontSize, lineHeight, fontFamily, fontBold, strokeWidth, textBackground, customColors, exportFormat, customFonts, imgbbApiKey, uploadHistory]);
 
     // Helpers
     const t = (key: keyof typeof TRANSLATIONS.en) => {
@@ -240,6 +316,22 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     const removeTextLayer = (id: string) => {
         setTextLayers(prev => prev.filter(l => l.id !== id));
         if (activeLayerId === id) setActiveLayerId(null);
+    };
+
+    const addCustomFont = (name: string, url: string) => {
+        setCustomFonts(prev => [...prev, { name, url }]);
+    };
+
+    const removeCustomFont = (name: string) => {
+        setCustomFonts(prev => prev.filter(f => f.name !== name));
+    };
+
+    const addToHistory = (upload: ImgurUpload) => {
+        setUploadHistory(prev => [upload, ...prev]);
+    };
+
+    const clearHistory = () => {
+        setUploadHistory([]);
     };
 
     return (
@@ -274,7 +366,12 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
             exportFormat, setExportFormat,
             isSettingsOpen, setIsSettingsOpen,
             t,
-            addTextLayer, updateTextLayer, removeTextLayer
+            addTextLayer, updateTextLayer, removeTextLayer,
+            customFonts, setCustomFonts, addCustomFont, removeCustomFont,
+            imgbbApiKey, setImgbbApiKey,
+            uploadHistory, addToHistory, clearHistory,
+            currentView, setCurrentView,
+            exportHandler, setExportHandler
         }}>
             {children}
         </EditorContext.Provider>

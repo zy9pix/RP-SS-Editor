@@ -16,7 +16,7 @@ const Workspace = () => {
         fontFamily, fontSize, lineHeight, strokeWidth, textBackground, fontBold,
         imgBrightness, imgContrast, imgSaturation, exportFormat,
         isCinematic, isLinearGradient,
-        resolutionPresets
+        resolutionPresets, setExportHandler
     } = useEditor();
 
     const containerRef = useRef<HTMLDivElement>(null);
@@ -128,96 +128,86 @@ const Workspace = () => {
     };
 
     // --- EXPORT logic ---
+    const generateImageBlob = async (): Promise<Blob | null> => {
+        if (!processedImage && !originalImage) return null;
+
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+        const img = new Image();
+        img.src = (processedImage || originalImage) as string;
+        img.crossOrigin = "anonymous";
+        await new Promise(r => img.onload = r);
+
+        // Setup sizes
+        let canvasWidth = img.width;
+        let canvasHeight = img.height;
+        let drawYOffset = 0;
+        if (isCinematic) {
+            const barHeight = Math.round(img.height * 0.10);
+            canvasHeight = img.height + (barHeight * 2);
+            drawYOffset = barHeight;
+        }
+        canvas.width = canvasWidth;
+        canvas.height = canvasHeight;
+
+        if (!ctx) return null;
+
+        // BG
+        ctx.fillStyle = "black";
+        ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+
+        // Filter & Image
+        ctx.filter = `brightness(${imgBrightness}%) contrast(${imgContrast}%) saturate(${imgSaturation}%)`;
+        ctx.drawImage(img, 0, drawYOffset);
+        ctx.filter = "none";
+
+        // Gradient
+        if (isLinearGradient) {
+            const gradient = ctx.createLinearGradient(0, canvasHeight - drawYOffset, 0, (canvasHeight - drawYOffset) * 0.5);
+            gradient.addColorStop(0, "rgba(0,0,0,0.8)");
+            gradient.addColorStop(1, "rgba(0,0,0,0)");
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, drawYOffset, canvasWidth, img.height);
+        }
+
+        // Layers
+        const domImg = document.getElementById("main-image") as HTMLImageElement;
+        if (domImg) {
+            const scale = img.width / domImg.width;
+
+            for (const layer of textLayers) {
+                if (!layer.cachedImage) continue;
+
+                const layerImg = new Image();
+                layerImg.src = layer.cachedImage;
+                await new Promise(r => layerImg.onload = r);
+
+                const layX = layer.x * scale;
+                const layY = (layer.y * scale) + drawYOffset;
+
+                const PADDING = 50;
+                const drawX = layX - (PADDING * scale);
+                const drawY = layY - (PADDING * scale);
+
+                const finalW = layerImg.width * scale;
+                const finalH = layerImg.height * scale;
+
+                ctx.drawImage(layerImg, drawX, drawY, finalW, finalH);
+            }
+        }
+
+        return new Promise<Blob | null>(resolve => {
+            const extension = exportFormat || 'png';
+            canvas.toBlob(resolve, `image/${extension}`, 0.9);
+        });
+    };
+
+    // Register Handler
     useEffect(() => {
-        const doExport = async () => {
-            if (!processedImage && !originalImage) return;
-
-            const canvas = document.createElement("canvas");
-            const ctx = canvas.getContext("2d");
-            const img = new Image();
-            img.src = (processedImage || originalImage) as string;
-            img.crossOrigin = "anonymous";
-            await new Promise(r => img.onload = r);
-
-            // Setup sizes
-            let canvasWidth = img.width;
-            let canvasHeight = img.height;
-            let drawYOffset = 0;
-            if (isCinematic) {
-                const barHeight = Math.round(img.height * 0.10);
-                canvasHeight = img.height + (barHeight * 2);
-                drawYOffset = barHeight;
-            }
-            canvas.width = canvasWidth;
-            canvas.height = canvasHeight;
-
-            if (!ctx) return;
-
-            // BG
-            ctx.fillStyle = "black";
-            ctx.fillRect(0, 0, canvasWidth, canvasHeight);
-
-            // Filter & Image
-            ctx.filter = `brightness(${imgBrightness}%) contrast(${imgContrast}%) saturate(${imgSaturation}%)`;
-            ctx.drawImage(img, 0, drawYOffset);
-            ctx.filter = "none";
-
-            // Gradient
-            if (isLinearGradient) {
-                const gradient = ctx.createLinearGradient(0, canvasHeight - drawYOffset, 0, (canvasHeight - drawYOffset) * 0.5);
-                gradient.addColorStop(0, "rgba(0,0,0,0.8)");
-                gradient.addColorStop(1, "rgba(0,0,0,0)");
-                ctx.fillStyle = gradient;
-                ctx.fillRect(0, drawYOffset, canvasWidth, img.height);
-            }
-
-            // Layers
-            const domImg = document.getElementById("main-image") as HTMLImageElement;
-            if (domImg) {
-                const scale = img.width / domImg.width;
-
-                for (const layer of textLayers) {
-                    if (!layer.cachedImage) continue;
-
-                    const layerImg = new Image();
-                    layerImg.src = layer.cachedImage;
-                    await new Promise(r => layerImg.onload = r);
-
-                    const layX = layer.x * scale;
-                    const layY = (layer.y * scale) + drawYOffset;
-
-                    // TextToImageRenderer adds 50px padding. DOM has -50px margin.
-                    // We simply draw the text image at the scaled position minus the scaled padding.
-                    // The text image ITSELF is already re-rendered with the correct maxWidth options.
-
-                    const PADDING = 50;
-                    const drawX = layX - (PADDING * scale);
-                    const drawY = layY - (PADDING * scale);
-
-                    // We draw the image scaled up by `scale` to match the high-res base image
-                    const finalW = layerImg.width * scale;
-                    const finalH = layerImg.height * scale;
-
-                    ctx.drawImage(layerImg, drawX, drawY, finalW, finalH);
-                }
-            }
-
-            // Trigger Download
-            const date = new Date();
-            const pad = (n: number) => n.toString().padStart(2, '0');
-            const dateStr = `${pad(date.getHours())}-${pad(date.getMinutes())}-${pad(date.getDate())}-${pad(date.getMonth() + 1)}-${date.getFullYear()}`;
-            const extension = exportFormat || 'png'; // Fallback
-            const filename = `rp-edit-${dateStr}.${extension}`;
-
-            const link = document.createElement("a");
-            link.download = filename;
-            link.href = canvas.toDataURL(`image/${extension}`, 0.9);
-            link.click();
-        };
-
-        window.addEventListener("RP_EDITOR_EXPORT", doExport);
-        return () => window.removeEventListener("RP_EDITOR_EXPORT", doExport);
-    }, [processedImage, originalImage, textLayers, imgBrightness, imgContrast, imgSaturation, isCinematic, isLinearGradient, exportFormat]);
+        if (setExportHandler) {
+            setExportHandler(generateImageBlob);
+        }
+    }, [processedImage, originalImage, textLayers, imgBrightness, imgContrast, imgSaturation, isCinematic, isLinearGradient, exportFormat, setExportHandler]);
 
     const handleApplyCrop = async () => {
         if (!originalImage || !cropSelection || cropSelection.w < 10 || cropSelection.h < 10) {
