@@ -127,10 +127,15 @@ const AppContent = () => {
     );
 };
 
+import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/react";
+
 const App = () => {
     return (
         <EditorProvider>
             <AppContent />
+            <Analytics />
+            <SpeedInsights />
         </EditorProvider>
     );
 };
