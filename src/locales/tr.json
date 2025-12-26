@@ -75,5 +75,16 @@
     "uploadTitle": "Ekran Görüntüsü Yükle",
     "uploadDesc": "Sürükleyip bırakın veya gözatmak için tıklayın",
     "cinema": "Sinematik",
-    "grading": "Renk Derecelendirme"
+    "grading": "Renk Derecelendirme",
+    "aiTools": "YZ ARAÇLARI",
+    "filterTopic": "Konuya Göre Filtrele",
+    "summarize": "Özetle",
+    "enterTopic": "Konu girin (Ör: 'Kaza', 'Tartışma')",
+    "summaryLength": "Özet Uzunluğu:",
+    "short": "Kısa (~50 kelime)",
+    "medium": "Orta (~100 kelime)",
+    "long": "Uzun (~300 kelime)",
+    "processingAI": "İşleniyor...",
+    "topicRequired": "Lütfen bir konu veya anahtar kelime girin.",
+    "textRequired": "Lütfen önce biraz metin girin."
 }

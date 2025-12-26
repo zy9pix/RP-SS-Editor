@@ -75,5 +75,16 @@
     "lblBold": "Bold",
     "lblBackground": "Background",
     "uploadTitle": "Upload Screenshot",
-    "uploadDesc": "Drag & drop or click to browse"
+    "uploadDesc": "Drag & drop or click to browse",
+    "aiTools": "AI TOOLS",
+    "filterTopic": "Filter by Topic",
+    "summarize": "Summarize",
+    "enterTopic": "Enter topic (e.g. 'Car Crash', 'Argument')",
+    "summaryLength": "Summary Length:",
+    "short": "Short (~50 words)",
+    "medium": "Medium (~100 words)",
+    "long": "Long (~300 words)",
+    "processingAI": "Processing...",
+    "topicRequired": "Please enter a topic or keyword.",
+    "textRequired": "Please enter some text first."
 }

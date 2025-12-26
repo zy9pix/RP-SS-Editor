@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { X, Check, type LucideIcon, Sparkles } from 'lucide-react';
 import { useEditor } from '@/src/context/EditorContext';
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, HarmCategory, HarmBlockThreshold } from "@google/genai";
 import { parseChatLog, cleanChatLog } from '@/src/utils/chatParser';
 import FormattingToolbar from '../editor/FormattingToolbar';
 
@@ -16,6 +16,7 @@ const TextLayerModal = () => {
     const [aiMode, setAiMode] = useState<'none' | 'filter' | 'summarize'>('none');
     const [filterInstruction, setFilterInstruction] = useState("");
     const [isFiltering, setIsFiltering] = useState(false);
+    const [summaryLength, setSummaryLength] = useState<'short' | 'medium' | 'long'>('medium');
     const inputRef = useRef<HTMLTextAreaElement>(null);
 
     useEffect(() => {
@@ -52,6 +53,11 @@ const TextLayerModal = () => {
             return;
         }
 
+        if (!localText.trim()) {
+            alert(t('textRequired'));
+            return;
+        }
+
         try {
             setIsFiltering(true);
             const ai = new GoogleGenAI({ apiKey: apiKey });
@@ -62,7 +68,7 @@ const TextLayerModal = () => {
 
             if (aiMode === 'filter') {
                 if (!filterInstruction.trim()) {
-                    alert("Please enter a topic or keyword.");
+                    alert(t('topicRequired'));
                     setIsFiltering(false);
                     return;
                 }
@@ -82,6 +88,11 @@ const TextLayerModal = () => {
                 `;
             } else if (aiMode === 'summarize') {
                 systemInstruction = "You are a creative storyteller.";
+
+                let wordLimit = "100";
+                if (summaryLength === 'short') wordLimit = "50";
+                if (summaryLength === 'long') wordLimit = "300";
+
                 prompt = `
                 I will provide a roleplay chatlog.
                 TASK: Write a compelling, short narrative summary of the events in this chatlog.
@@ -89,7 +100,7 @@ const TextLayerModal = () => {
                 RULES:
                 1. Use past tense.
                 2. Focus on the key actions and dialogue.
-                3. Keep it under 200 words.
+                3. Keep it under ${wordLimit} words.
                 4. Do not use bullet points, write it as a story paragraph.
                 5. Write the summary in the same language as the chatlog content.
                 
@@ -105,7 +116,13 @@ const TextLayerModal = () => {
                     parts: [{ text: systemInstruction + "\n" + prompt }]
                 }],
                 config: {
-                    tools: []
+                    tools: [],
+                    safetySettings: [
+                        { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+                        { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
+                        { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
+                        { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+                    ]
                 }
             });
 
@@ -165,7 +182,7 @@ const TextLayerModal = () => {
                     <div className="flex flex-col gap-2 p-3 bg-purple-900/10 border border-purple-500/20 rounded-lg">
                         <div className="flex items-center justify-between">
                             <span className="text-xs font-bold text-purple-400 flex items-center gap-1">
-                                <Sparkles size={12} /> AI TOOLS
+                                <Sparkles size={12} /> {t('aiTools')}
                             </span>
                             <div className="flex gap-2">
                                 <button
@@ -174,7 +191,7 @@ const TextLayerModal = () => {
                                         ? 'bg-purple-600 text-white border-purple-400'
                                         : 'bg-[#0f0f0f] text-gray-400 border-gray-700 hover:border-gray-500'}`}
                                 >
-                                    Filter by Topic
+                                    {t('filterTopic')}
                                 </button>
                                 <button
                                     onClick={() => {
@@ -184,7 +201,7 @@ const TextLayerModal = () => {
                                         ? 'bg-purple-600 text-white border-purple-400'
                                         : 'bg-[#0f0f0f] text-gray-400 border-gray-700 hover:border-gray-500'}`}
                                 >
-                                    Summarize
+                                    {t('summarize')}
                                 </button>
                             </div>
                         </div>
@@ -195,7 +212,7 @@ const TextLayerModal = () => {
                                 {aiMode === 'filter' && (
                                     <input
                                         type="text"
-                                        placeholder="Enter topic (e.g. 'Car Crash', 'Argument', 'Phone call')"
+                                        placeholder={t('enterTopic')}
                                         className="flex-1 bg-[#0f0f0f] border border-gray-700 rounded px-2 py-1.5 text-xs focus:border-purple-500 outline-none text-white"
                                         value={filterInstruction}
                                         onChange={(e) => setFilterInstruction(e.target.value)}
@@ -204,8 +221,17 @@ const TextLayerModal = () => {
                                     />
                                 )}
                                 {aiMode === 'summarize' && (
-                                    <div className="flex-1 text-xs text-gray-400 flex items-center italic">
-                                        Create a narrative summary of these logs?
+                                    <div className="flex-1 flex gap-2 items-center">
+                                        <span className="text-xs text-gray-400 italic">{t('summaryLength')}</span>
+                                        <select
+                                            value={summaryLength}
+                                            onChange={(e) => setSummaryLength(e.target.value as any)}
+                                            className="bg-[#0f0f0f] border border-gray-700 rounded px-2 py-1 text-xs text-white outline-none focus:border-purple-500"
+                                        >
+                                            <option value="short">{t('short')}</option>
+                                            <option value="medium">{t('medium')}</option>
+                                            <option value="long">{t('long')}</option>
+                                        </select>
                                     </div>
                                 )}
 
@@ -214,7 +240,7 @@ const TextLayerModal = () => {
                                     disabled={isFiltering}
                                     className="bg-purple-600 hover:bg-purple-500 text-white px-3 py-1.5 rounded text-xs font-bold disabled:opacity-50 min-w-[60px] flex items-center justify-center"
                                 >
-                                    {isFiltering ? <div className="animate-spin w-3 h-3 border-2 border-white border-t-transparent rounded-full"></div> : "GO"}
+                                    {isFiltering ? <div className="animate-spin w-3 h-3 border-2 border-white border-t-transparent rounded-full"></div> : t('go')}
                                 </button>
                             </div>
                         )}
