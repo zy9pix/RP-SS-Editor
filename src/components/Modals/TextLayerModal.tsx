@@ -13,7 +13,7 @@ const TextLayerModal = () => {
     } = useEditor();
 
     const [localText, setLocalText] = useState("");
-    const [showFilterInput, setShowFilterInput] = useState(false);
+    const [aiMode, setAiMode] = useState<'none' | 'filter' | 'summarize'>('none');
     const [filterInstruction, setFilterInstruction] = useState("");
     const [isFiltering, setIsFiltering] = useState(false);
     const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -42,16 +42,13 @@ const TextLayerModal = () => {
     };
 
     const handleParseClean = () => {
-        // Run the robust cleaner
         const cleaned = cleanChatLog(localText);
         setLocalText(cleaned);
     };
 
-
-    const handleAIFilter = async () => {
-        if (!localText.trim()) return;
+    const handleAITask = async () => {
         if (!apiKey) {
-            alert("Please set API Key in settings first");
+            alert(t('noKey'));
             return;
         }
 
@@ -60,44 +57,93 @@ const TextLayerModal = () => {
             const ai = new GoogleGenAI({ apiKey: apiKey });
             const model = ai.models;
 
-            const prompt = `You are a roleplay chatlog cleaner. 
-      I will provide a raw chatlog and specific instructions on how to filter it.
-      
-      User Instruction: "${filterInstruction || "Clean up the log"}"
-      
-      CRITICAL RULES:
-      1. Remove any lines that are consecutive duplicates (same text appearing twice in a row).
-      2. Fix Spacing: Ensure there is a space after a character's Lastname if it is missing.
-      3. Follow the user instruction above if provided.
-      
-      Raw Log:
-      ${localText}
-  
-      Return ONLY the filtered chat lines. Do not wrap in markdown. Maintain the original formatting.`;
+            let prompt = "";
+            let systemInstruction = "You are a helpful assistant for Roleplay chatlogs.";
+
+            if (aiMode === 'filter') {
+                if (!filterInstruction.trim()) {
+                    alert("Please enter a topic or keyword.");
+                    setIsFiltering(false);
+                    return;
+                }
+                systemInstruction = "You are a precise chatlog filter.";
+                prompt = `
+                I will provide a roleplay chatlog.
+                TASK: Filter this chatlog to strictly retain ONLY the lines that are relevant to the following topic/keyword: "${filterInstruction}".
+                
+                RULES:
+                1. Return only the relevant lines.
+                2. Do not change the text content of the lines.
+                3. Do not add any conversational filler.
+                4. Maintain original formatting.
+                
+                CHATLOG:
+                ${localText}
+                `;
+            } else if (aiMode === 'summarize') {
+                systemInstruction = "You are a creative storyteller.";
+                prompt = `
+                I will provide a roleplay chatlog.
+                TASK: Write a compelling, short narrative summary of the events in this chatlog.
+                
+                RULES:
+                1. Use past tense.
+                2. Focus on the key actions and dialogue.
+                3. Keep it under 200 words.
+                4. Do not use bullet points, write it as a story paragraph.
+                5. Write the summary in the same language as the chatlog content.
+                
+                CHATLOG:
+                ${localText}
+                `;
+            }
 
             const result = await model.generateContent({
-                model: "gemini-2.5-flash",
-                contents: prompt
+                model: "gemini-3-flash-preview",
+                contents: [{
+                    role: 'user',
+                    parts: [{ text: systemInstruction + "\n" + prompt }]
+                }],
+                config: {
+                    tools: []
+                }
             });
 
-            if (result.text) {
-                let cleanText = result.text.trim();
+            // Handle response based on GoogleGenAI SDK structure
+            // Using implicit casting to any to access candidates if types are missing/mismatched in strict mode
+            // or simply text() if valid. The key is catching the text.
+
+            // Note: In newer SDKs, result might contain text() method or candidates array.
+            // We check for 'text' function or candidates.
+            let outText = "";
+
+            // @ts-ignore - bypassing potential type mismatch for alpha SDK
+            if (typeof result.text === 'function') {
+                // @ts-ignore
+                outText = result.text();
+            } else if (result.candidates && result.candidates.length > 0) {
+                const part = result.candidates[0].content?.parts?.[0];
+                if (part && part.text) outText = part.text;
+            }
+
+            if (outText) {
+                let cleanText = outText.trim();
+                // Clean code blocks if helpful AI adds them
                 if (cleanText.startsWith("```")) {
-                    cleanText = cleanText.replace(/^```(text)?\n/i, "").replace(/\n```$/, "");
+                    cleanText = cleanText.replace(/^```(text|markdown)?\n/i, "").replace(/\n```$/, "");
                 }
                 setLocalText(cleanText);
-                setShowFilterInput(false);
+                setAiMode('none');
                 setFilterInstruction("");
             }
 
         } catch (error) {
-            console.error("Filter error", error);
-            alert(t('filterErr'));
+            console.error("AI Error", error);
+            alert("AI Error: " + error);
         } finally {
             setIsFiltering(false);
         }
     };
-
 
     if (!isTextModalOpen) return null;
 
@@ -114,45 +160,75 @@ const TextLayerModal = () => {
                     </button>
                 </div>
 
-                {/* Content */}
                 <div className="p-4 flex-1 flex flex-col gap-4 overflow-y-auto">
-                    <div className="flex gap-2">
-                        <button
-                            onClick={() => setShowFilterInput(!showFilterInput)}
-                            className={`flex-1 border border-gray-700 rounded py-2 text-xs flex items-center justify-center gap-2 transition-colors ${showFilterInput ? 'bg-purple-900/50 border-purple-500 text-purple-200' : 'bg-[#2a2a2a] hover:bg-[#333] text-gray-300'}`}
-                        >
-                            <Sparkles size={14} /> AI Smart Clean
-                        </button>
-                        <button
-                            onClick={handleParseClean}
-                            className="flex-1 border border-gray-700 rounded py-2 text-xs flex items-center justify-center gap-2 bg-[#2a2a2a] hover:bg-[#333] text-gray-300 transition-colors"
-                        >
-                            <Check size={14} /> Parse / Clean Timestamps
-                        </button>
-                    </div>
-
-                    {/* AI Filter Input Area */}
-                    {showFilterInput && (
-                        <div className="p-3 bg-purple-900/20 border border-purple-500/30 rounded animate-in fade-in slide-in-from-top-2">
+                    {/* AI Toolbar */}
+                    <div className="flex flex-col gap-2 p-3 bg-purple-900/10 border border-purple-500/20 rounded-lg">
+                        <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-purple-400 flex items-center gap-1">
+                                <Sparkles size={12} /> AI TOOLS
+                            </span>
                             <div className="flex gap-2">
-                                <input
-                                    type="text"
-                                    placeholder="Instruction (e.g., 'Remove generic radio messages')"
-                                    className="flex-1 bg-[#0f0f0f] border border-gray-700 rounded px-2 py-2 text-xs focus:border-purple-500 outline-none text-white"
-                                    value={filterInstruction}
-                                    onChange={(e) => setFilterInstruction(e.target.value)}
-                                    onKeyDown={(e) => e.key === 'Enter' && handleAIFilter()}
-                                />
                                 <button
-                                    onClick={handleAIFilter}
-                                    disabled={isFiltering}
-                                    className="bg-purple-600 hover:bg-purple-500 text-white px-3 rounded text-xs disabled:opacity-50"
+                                    onClick={() => setAiMode(aiMode === 'filter' ? 'none' : 'filter')}
+                                    className={`px-3 py-1 rounded text-[10px] font-bold transition-all border ${aiMode === 'filter'
+                                        ? 'bg-purple-600 text-white border-purple-400'
+                                        : 'bg-[#0f0f0f] text-gray-400 border-gray-700 hover:border-gray-500'}`}
                                 >
-                                    {isFiltering ? <div className="animate-spin w-3 h-3 border-2 border-white border-t-transparent rounded-full"></div> : "Clean"}
+                                    Filter by Topic
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setAiMode('summarize');
+                                    }}
+                                    className={`px-3 py-1 rounded text-[10px] font-bold transition-all border ${aiMode === 'summarize'
+                                        ? 'bg-purple-600 text-white border-purple-400'
+                                        : 'bg-[#0f0f0f] text-gray-400 border-gray-700 hover:border-gray-500'}`}
+                                >
+                                    Summarize
                                 </button>
                             </div>
                         </div>
-                    )}
+
+                        {/* AI Inputs / Actions Area */}
+                        {aiMode !== 'none' && (
+                            <div className="mt-2 flex gap-2 animate-in slide-in-from-top-2">
+                                {aiMode === 'filter' && (
+                                    <input
+                                        type="text"
+                                        placeholder="Enter topic (e.g. 'Car Crash', 'Argument', 'Phone call')"
+                                        className="flex-1 bg-[#0f0f0f] border border-gray-700 rounded px-2 py-1.5 text-xs focus:border-purple-500 outline-none text-white"
+                                        value={filterInstruction}
+                                        onChange={(e) => setFilterInstruction(e.target.value)}
+                                        onKeyDown={(e) => e.key === 'Enter' && handleAITask()}
+                                        autoFocus
+                                    />
+                                )}
+                                {aiMode === 'summarize' && (
+                                    <div className="flex-1 text-xs text-gray-400 flex items-center italic">
+                                        Create a narrative summary of these logs?
+                                    </div>
+                                )}
+
+                                <button
+                                    onClick={handleAITask}
+                                    disabled={isFiltering}
+                                    className="bg-purple-600 hover:bg-purple-500 text-white px-3 py-1.5 rounded text-xs font-bold disabled:opacity-50 min-w-[60px] flex items-center justify-center"
+                                >
+                                    {isFiltering ? <div className="animate-spin w-3 h-3 border-2 border-white border-t-transparent rounded-full"></div> : "GO"}
+                                </button>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Standard Parsing Tools */}
+                    <div className="flex gap-2">
+                        <button
+                            onClick={handleParseClean}
+                            className="w-full border border-gray-700 rounded py-2 text-xs flex items-center justify-center gap-2 bg-[#2a2a2a] hover:bg-[#333] text-gray-300 transition-colors"
+                        >
+                            <Check size={14} /> Parse / Clean Timestamps (Standard)
+                        </button>
+                    </div>
 
                     <FormattingToolbar inputRef={inputRef} />
 

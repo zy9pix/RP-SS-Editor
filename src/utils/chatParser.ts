@@ -15,126 +15,58 @@ export const cleanChatLog = (rawText: string): string => {
     const cleanedLines: string[] = [];
     const knownNames = new Set<string>();
 
-    // PASS 1: Entity Discovery (Find names from ANY Dialogue line)
-    // We need to capture names to fix the "> NameAction" glitch later.
-    // Formats found in log:
-    // 1. "Name Surname: ..."
-    // 2. "Name Surname (Durum): ..."
-    // 3. "Name Surname seslenir (Target): ..."
-    // 4. "(Telsiz) Name Surname: ..." or "(Telsiz) Name Surname:: ..."
-    // 5. "Name Surname kısık sesle (Target): ..."
-    // 6. "Name Surname (kısık ses): ..."
-    // 7. "Name Surname (kısık ses) (Telefon): ..."
-    // 8. "Name Surname fısıldar: ..."
+    // Regex Definitions for Whitelist
+    // 1. Actions: Start with * or >
+    const actionRegex = /^[*>]/.test(""); // Just a placeholder, we use startsWith checks for speed usually, but let's define patterns if needed.
 
-    // Unified Regex for Name Capture:
-    // Start of line (ignoring potential "(Telsiz) " prefix) -> Capture Two TitleCase Words. as Name.
-    const nameRegex = /^(?:\(Telsiz\) )?([A-Z][a-z]+ [A-Z][a-z]+)/;
+    // 2. Dialogues
+    // Standard: "Name Surname: Msg"
+    // Modified: "Name Surname (modifier): Msg"
+    // Targeted: "Name Surname seslenir (Target): Msg" or "Name Surname fısıldar: Msg"
+    // Radio: "(Telsiz) Name Surname: Msg"
+    // Phone: "Name Surname (Telefon): Msg" or "Name Surname (Phone): Msg"
 
+    // Core Name Pattern: Two Capitalized Words (e.g., "John Doe")
+    // Note: We used a regex in previous version, let's refine it.
+    // Allow for potential "Name Surname DeSomething" (3 words)? rare but possible. Let's stick to standard 2-3 words.
+    // But Strict Mode relies on the structure mostly.
+
+    // We will iterate and check specific "Keep" conditions.
+
+    // Regex for capturing names from potential dialogue lines to use in Glitch Fix
+    const nameCaptureRegex = /^(?:\(Telsiz\) )?([A-Z][a-z]+ [A-Z][a-z]+)/;
+
+    // PASS 1: Entity Discovery (Preserved for Glitch Fix)
     for (const line of lines) {
         const trimmed = line.trim();
         if (!trimmed) continue;
-
-        // Skip system lines for discovery to avoid false positives (though capitalized system messages are rare)
+        // Skip obvious non-dialogue for name mining to avoid noise
         if (trimmed.startsWith('[') || trimmed.startsWith('((')) continue;
 
-        const match = trimmed.match(nameRegex);
+        const match = trimmed.match(nameCaptureRegex);
         if (match && match[1]) {
-            // Additional check: Ensure it's not a known system prefix looking like a name
             const candidate = match[1];
-            if (candidate !== "Hava Durumu" && candidate !== "Applied damage" && candidate !== "Menu link" && candidate !== "Oyuncu ID" && candidate !== "Banka Hesap") {
+            // Filtration of system "Names"
+            const systemKeywords = ["Hava Durumu", "Applied damage", "Menu link", "Oyuncu ID", "Banka Hesap", "Kapı kilitli", "Mülküne hoş", "Araç sigortanın"];
+            if (!systemKeywords.some(k => candidate.includes(k))) {
                 knownNames.add(candidate);
             }
         }
     }
 
-    // PASS 2: Filtering and Fixing
+    // PASS 2: Block Processing & Whitelisting
     for (let i = 0; i < lines.length; i++) {
         let line = lines[i].trim();
-
         if (!line) continue;
 
-        // --- 1. STRICT FILTERING (REMOVE) ---
-
-        // 1.1 Suffix/Prefix Checks
-        if (line.startsWith('((')) continue;
-        if (line.startsWith('[')) continue; // [DATE], [Radyo], [BİLGİ], [HATA], [TEEFON], [GLOBAL OLAY]...
-        if (line.startsWith('⚠️')) continue;
-
-        // 1.2 Specific block headers/lines identified in log
-        const exactMatches = new Set([
-            "GTA World Türkiye'ye hoş geldin.",
-            "Welcome to GTA World.",
-            "Hava Durumu:",
-            "Oyuncu(lar) bulunamadı.",
-            "Kapı kilitli.",
-            "Kapı kilidini açtın.",
-            "Kapının kilidini açtın.",
-            "Kapıyı kilitledin.",
-            "Mülküne hoş geldin.",
-            "Çağrıyı sonlandırdın.",
-            "Sohbeti yeniden başlatmak için F2'yi ve imleci görünür yapmak için F3'ü kullanabilirsin. F3 çalışmıyorsa /pc komutunu kullanın.",
-            "Araç sigortanın süresi doldu. Yenilemek için 207 numarasını arayabilirsin."
-        ]);
-        if (exactMatches.has(line)) continue;
-
-        // 1.3 Substring Removal (Aggressive)
-        const removeSubstrings = [
-            "Oyuncu ID", "Sıcaklık:", "Rüzgar:", "BİLGİ:", "Info:",
-            "GTAW Roleplay Oyuncu İstatistikleri", "Karakter | Nakit:", "Banka Hesap Numarası:", "Mülkler |", "İşletme 1:", "Şu anki işi:", "Zaman | Toplam saat:", "Custom Number:", "Premium:", "World Point:", "Panda Point", "TARİH: Sunucu zamanı:", "Son 30 günde geçirilen süre", "Suç Puanı:", "sağlık | Can:",
-            "Kapı açıldı mı?", "Kapı kolaylıkla açıldı.", // Mechanic / Do checks usually
-            "Applied damage pack:",
-            "Kombin adını değiştirmek için",
-            "Animasyonları durdurmak ve",
-            "Animasyonların yanlış kullanımı",
-            "Belirttiğin isimde bir animasyon",
-            "tutarında ödeme yaptın",
-            "Aracını park ettin",
-            "Menu link:",
-            "/viewmenu komutuyla",
-            "dondurmanızı kaldırmak için",
-            "dondurmanı açabilirsin",
-            "tevlevizyonun sesini değiştirebilirsin",
-            "mülkünün özelliklerini",
-            "Saklama alanını başarıyla kaldırdın",
-            "Mülkün içerisinden",
-            "karakterini değiştirmek için çıkış yaptı",
-            "ID'si", // '... adlı oyuncunun ID'si X' lines
-            "Konum Oliver Reave tarafından işaretlendi", // GPS markers
-            "Sıcak Şarap kullandın", // Item usage text? keeping if ambiguous, but usually system.
-            "K'ye basarak dondurmanı",
-            "Dimension sıfırlandı",
-            "Sahibi olmadığı için kilitli bir mülke girdin",
-            "Kapıyı açtın",
-            "işletmesine $", "ödeme yaptın", "bahşiş verdin",
-            "pos cihazı uzatıyor", "/bpaccept",
-            "Admin", "jailed",
-            "Sağlık | Can:", "Sahip olunan mülkler:", "Kapıyı kilidini açtın", "İçeriye zorla giriş yapmak için"
-        ];
-
-        if (removeSubstrings.some(sub => line.includes(sub))) continue;
-
-        // 1.4 Regex Removal for variable patterns
-        if (line.match(/^=.+=$/)) continue; // Separator lines "======"
-        if (line.match(/^\( \([0-9]+\) .+ sunucudan ayrıldı\. \)\)$/)) continue; // Quit messages
-        if (line.match(/^\([0-9]+\) .+ \(Ping: [0-9]+\)/)) continue; // Ping lines "(94) Aldwin Baker (Ping: 62)..."
-
-        // --- 2. GLITCH FIXING (Correction) ---
-
-        // --- 2. GLITCH FIXING (Correction) ---
+        // --- 1. Glitch Correction (Pre-Filter) ---
         // Fix: > Name SurnameAction -> > Name Surname Action
-        // Real examples: "> Aldwin Bakerkapıyı", "> Ferran Montillabirim"
         if (line.startsWith('>')) {
             for (const name of knownNames) {
                 const prefix = `> ${name}`;
-                // Check if line matches prefix pattern (e.g. "> Aldwin Baker")
                 if (line.startsWith(prefix)) {
-                    // Check character immediately after name
                     const charAfter = line[prefix.length];
-
-                    // If charAfter is NOT a space, we have a glitch (e.g. 'k' in Bakerkapıyı)
                     if (charAfter && charAfter !== ' ') {
-                        // FIX: Insert space
                         line = prefix + ' ' + line.slice(prefix.length);
                     }
                     break;
@@ -142,17 +74,70 @@ export const cleanChatLog = (rawText: string): string => {
             }
         }
 
-        // --- 3. FINAL KEEP CHECK ---
-        // Ensure it looks like story content
-        // Allowed: 
-        // - Starts with > or *
-        // - Contains : (Dialogue)
-        // - Specific format like "(Telsiz)"?
+        // --- 2. Whitelist Checks ---
+        let keep = false;
 
-        // If it doesn't match any story format, we might want to drop it? 
-        // e.g. "Silvie Holeckova: TAMAM! Teşekkürler!" -> Keep (Contains :)
+        // Rule A: Actions (* or >)
+        // STRICT: Must start with * or >. 
+        if (line.startsWith('*') || line.startsWith('>')) {
+            keep = true;
+        }
 
-        cleanedLines.push(line);
+        // Rule B: Standard & Modified Dialogue
+        // Pattern: Starts with Name Surname, contains ": " eventually.
+        // We need to be careful not to keep "BİLGİ: ..." or "HATA: ..."
+        // So we check if the 'Author' looks like a Roleplay Name.
+
+        if (!keep) {
+            // Check for "(Telsiz) " prefix availability
+            let contentToCheck = line;
+            if (line.startsWith("(Telsiz) ")) {
+                contentToCheck = line.substring(9); // remove prefix
+            }
+
+            // Extract potential name at start
+            // Looking for "Name Surname" at start
+            const nameMatch = contentToCheck.match(/^([A-Z][a-z]+ [A-Z][a-z]+)/);
+
+            if (nameMatch) {
+                const potentialName = nameMatch[1];
+
+                // Exclude System 'Names'
+                const invalidNames = ["Hava Durumu", "Sıcaklık: ", "Rüzgar: ", "Kapı kilitli", "Mülküne hoş", "Mülkler |", "Karakter |", "Sağlık |", "Zaman |", "Son 30", "Suç Puanı", "Banka Hesap", "Custom Number", "Premium: ", "World Point", "Panda Point", "Menu link"];
+                // Also "Oyuncu ID"
+
+                const isSystem = invalidNames.some(sys => line.startsWith(sys) || potentialName === sys) || contentToCheck.startsWith("Oyuncu ID");
+
+                if (!isSystem) {
+                    // It has a name. Now does it look like dialogue?
+                    // Dialogue usually has a colon ": " OR it's a specific "seslenir" without colon? (Log: "Name Surname seslenir (Target): Msg" -> has colon)
+                    // Log: "Name Surname (Telefon): Msg" -> has colon
+
+                    if (line.includes(": ")) {
+                        keep = true;
+                    }
+                    // Case: Shout without colon? (Rare, usually "matches (bağırır):")
+                    else if (line.match(/(bağırır|seslenir|fısıldar)/)) {
+                        // Even if colon is missing (glitch?), if it has speech verb + Name, keep it.
+                        keep = true;
+                    }
+                }
+            }
+        }
+
+        // Rule C: Radio / Phone special cases
+        // (Handled by Rule B generally if they follow "Name: Msg" structure, but let's double check)
+
+        if (keep) {
+            // DUPLICATE CHECK: For lines starting with '>', check if it's a consecutive duplicate
+            if (line.startsWith('>')) {
+                const lastLine = cleanedLines[cleanedLines.length - 1];
+                if (lastLine && lastLine === line) {
+                    continue; // Skip strict duplicate
+                }
+            }
+            cleanedLines.push(line);
+        }
     }
 
     return cleanedLines.join('\n');
