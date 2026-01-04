@@ -11,7 +11,7 @@ export interface ChatLine {
  * Refined with real data from "14.DEC.2025" log.
  */
 export const cleanChatLog = (rawText: string): string => {
-    const lines = rawText.split('\n');
+    const lines = rawText.split('\n').map(l => l.replace(/^\[\d{2}:\d{2}:\d{2}\]\s*/, ""));
     const cleanedLines: string[] = [];
     const knownNames = new Set<string>();
 
@@ -103,7 +103,7 @@ export const cleanChatLog = (rawText: string): string => {
                 const potentialName = nameMatch[1];
 
                 // Exclude System 'Names'
-                const invalidNames = ["Hava Durumu", "Sıcaklık: ", "Rüzgar: ", "Kapı kilitli", "Mülküne hoş", "Mülkler |", "Karakter |", "Sağlık |", "Zaman |", "Son 30", "Suç Puanı", "Banka Hesap", "Custom Number", "Premium: ", "World Point", "Panda Point", "Menu link"];
+                const invalidNames = ["Trucker Seviyesi", "Hava Durumu", "Sıcaklık: ", "Rüzgar: ", "Kapı kilitli", "Mülküne hoş", "Mülkler |", "Karakter |", "Sağlık |", "Zaman |", "Son 30", "Suç Puanı", "Banka Hesap", "Custom Number", "Premium: ", "World Point", "Panda Point", "Menu link"];
                 // Also "Oyuncu ID"
 
                 const isSystem = invalidNames.some(sys => line.startsWith(sys) || potentialName === sys) || contentToCheck.startsWith("Oyuncu ID");

@@ -152,6 +152,10 @@ const Workspace = () => {
 
         if (!ctx) return null;
 
+        // High quality smoothing
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = "high";
+
         // BG
         ctx.fillStyle = "black";
         ctx.fillRect(0, 0, canvasWidth, canvasHeight);
@@ -176,29 +180,44 @@ const Workspace = () => {
             const scale = img.width / domImg.width;
 
             for (const layer of textLayers) {
-                if (!layer.cachedImage) continue;
+                // Re-render text layers at high resolution based on scale
+                const scaledOptions = {
+                    fontFamily,
+                    fontSize: fontSize * scale,
+                    lineHeight: lineHeight * scale,
+                    strokeWidth: strokeWidth * scale,
+                    fontBold,
+                    textBackground,
+                    maxWidth: (layer.maxWidth || 1000) * scale
+                };
+
+                const { dataUrl } = await TextToImageRenderer.generateLayerImage(layer.text, scaledOptions);
 
                 const layerImg = new Image();
-                layerImg.src = layer.cachedImage;
+                layerImg.src = dataUrl;
                 await new Promise(r => layerImg.onload = r);
 
                 const layX = layer.x * scale;
                 const layY = (layer.y * scale) + drawYOffset;
 
-                const PADDING = 50;
-                const drawX = layX - (PADDING * scale);
-                const drawY = layY - (PADDING * scale);
+                // TextToImageRenderer adds 50px padding to the generated image. 
+                // We need to offset by this padding (unscaled, because the renderer adds fixed padding? 
+                // Wait, TextToImageRenderer padding is hardcoded 50. 
+                // Since we are generating a NEW image, it will have 50px padding.
+                // So we just subtract 50 from the draw position.)
+                const RENDERER_PADDING = 50;
 
-                const finalW = layerImg.width * scale;
-                const finalH = layerImg.height * scale;
+                const drawX = layX - RENDERER_PADDING;
+                const drawY = layY - RENDERER_PADDING;
 
-                ctx.drawImage(layerImg, drawX, drawY, finalW, finalH);
+                ctx.drawImage(layerImg, drawX, drawY);
             }
         }
 
         return new Promise<Blob | null>(resolve => {
             const extension = exportFormat || 'png';
-            canvas.toBlob(resolve, `image/${extension}`, 0.9);
+            // Use maximum quality (1.0) for JPEGs
+            canvas.toBlob(resolve, `image/${extension}`, 1.0);
         });
     };
 
@@ -247,9 +266,10 @@ const Workspace = () => {
             const ctx = canvas.getContext("2d");
 
             if (ctx) {
+                ctx.imageSmoothingEnabled = true; // Ensure enabled
                 ctx.imageSmoothingQuality = "high";
                 ctx.drawImage(img, realX, realY, realW, realH, 0, 0, finalW, finalH);
-                setProcessedImage(canvas.toDataURL("image/jpeg", 0.9));
+                setProcessedImage(canvas.toDataURL("image/jpeg", 1.0));
                 setIsManualCropping(false);
                 setStatusMsg(t('cropDone'));
             }

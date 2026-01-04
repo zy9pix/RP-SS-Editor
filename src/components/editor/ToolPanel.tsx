@@ -129,7 +129,10 @@ const ToolPanel = () => {
             {/* Header */}
             <div className="p-4 border-b border-[#1a1a1a] flex items-center justify-between sticky top-0 bg-[#0B0B0C] z-30">
                 <h1 className="text-lg font-bold tracking-tight text-white flex items-center gap-2">
-                    <span style={{ color: '#CFD71B' }}>RP</span> Editor
+                    <div className="flex items-center">
+                        <span style={{ color: '#CFD71B' }}>Role</span>
+                        <span>Shot</span>
+                    </div>
                 </h1>
                 <button
                     onClick={() => setIsSettingsOpen(true)}
