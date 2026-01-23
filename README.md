@@ -1,4 +1,4 @@
-# RP Screenshot Editor
+# RoleShot
 
 A specialized web tool for Text-Based Roleplay servers to easily edit screenshots and overlay chatlogs with cinematic quality.
 

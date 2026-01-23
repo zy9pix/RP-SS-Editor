@@ -17,9 +17,9 @@ export default defineConfig(({ mode }) => {
         injectRegister: 'auto',
         includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
         manifest: {
-          name: 'RP Screenshot Editor',
-          short_name: 'RP Editor',
-          description: 'Roleplay Screenshot Editor',
+          name: 'RoleShot',
+          short_name: 'RoleShot',
+          description: 'Roleplay Screenshot Editor for Text-Based Roleplay servers',
           theme_color: '#0B0B0C',
           background_color: '#0B0B0C',
           display: 'standalone',
