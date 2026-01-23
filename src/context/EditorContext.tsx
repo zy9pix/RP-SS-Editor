@@ -134,8 +134,8 @@ interface EditorState {
     // View & Logic
     currentView: 'editor' | 'history';
     setCurrentView: (view: 'editor' | 'history') => void;
-    exportHandler: (() => Promise<Blob | null>) | null;
     setExportHandler: (handler: () => Promise<Blob | null>) => void;
+    exportImage: () => Promise<Blob | null>;
 }
 
 const EditorContext = createContext<EditorState | undefined>(undefined);
@@ -174,7 +174,7 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     const [lineHeight, setLineHeight] = useState(18);
     const [strokeWidth, setStrokeWidth] = useState(2);
     const [textBackground, setTextBackground] = useState(false);
-    const [fontFamily, setFontFamily] = useState("Helvetica");
+    const [fontFamily, setFontFamily] = useState("Arial");
     const [fontBold, setFontBold] = useState(true);
     const [customColors, setCustomColors] = useState<string[]>(DEFAULT_CUSTOM_COLORS);
 
@@ -184,6 +184,7 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
 
     const [exportFormat, setExportFormat] = useState<"png" | "jpeg" | "webp">("png");
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+    const isLoaded = React.useRef(false);
 
     // New State: Fonts & ImgBB
     const [customFonts, setCustomFonts] = useState<CustomFont[]>([]);
@@ -191,12 +192,18 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     const [uploadHistory, setUploadHistory] = useState<ImgurUpload[]>([]);
 
     const [currentView, setCurrentView] = useState<'editor' | 'history'>('editor');
-    const [exportHandler, setExportHandlerState] = useState<(() => Promise<Blob | null>) | null>(null);
 
-    // We use a ref mechanism or just state setter for the handler.
-    const setExportHandler = (handler: () => Promise<Blob | null>) => {
-        setExportHandlerState(() => handler);
-    };
+    // Use Ref for the actual handler to avoid infinite re-render loops
+    const exportHandlerRef = React.useRef<(() => Promise<Blob | null>) | null>(null);
+
+    const setExportHandler = React.useCallback((handler: () => Promise<Blob | null>) => {
+        exportHandlerRef.current = handler;
+    }, []);
+
+    const exportImage = React.useCallback(async () => {
+        if (exportHandlerRef.current) return await exportHandlerRef.current();
+        return null;
+    }, []);
 
     // --- Persistence & Effects ---
 
@@ -238,49 +245,91 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
                 console.error("Error loading config", e);
             }
         }
+
+        // After all state setters have been called, mark as loaded
+        // Note: individual setStates are batched or queued, but this marks the intent.
+        isLoaded.current = true;
     }, []);
 
     // Inject Custom Fonts
     useEffect(() => {
         const styleId = "rp-editor-custom-fonts";
-        let styleTag = document.getElementById(styleId);
-        if (customFonts.length === 0) {
-            if (styleTag) styleTag.remove();
-            return;
-        }
+        const linkPrefix = "rp-editor-font-link-";
 
-        if (!styleTag) {
-            styleTag = document.createElement("style");
-            styleTag.id = styleId;
-            document.head.appendChild(styleTag);
-        }
+        // Cleanup old style tags and links
+        document.getElementById(styleId)?.remove();
+        document.querySelectorAll(`link[id^="${linkPrefix}"]`).forEach(el => el.remove());
+
+        if (customFonts.length === 0) return;
 
         let css = "";
         customFonts.forEach(font => {
-            css += `
-                @font-face {
-                    font-family: "${font.name}";
-                    src: url("${font.url}");
+            const isCss = font.url.includes("fonts.googleapis.com") || font.url.endsWith(".css");
+
+            if (isCss) {
+                // Inject Link
+                const link = document.createElement("link");
+                link.id = `${linkPrefix}${font.name.replace(/\s+/g, '-').toLowerCase()}`;
+                link.rel = "stylesheet";
+                link.href = font.url;
+                document.head.appendChild(link);
+
+                // Attempt to alias the user-provided name to the font in the CSS
+                // For Google Fonts, we extract the family name from the URL
+                if (font.url.includes("family=")) {
+                    try {
+                        const match = font.url.match(/family=([^&:]+)/);
+                        if (match && match[1]) {
+                            const googleName = decodeURIComponent(match[1].replace(/\+/g, ' '));
+                            // Only alias if the names differ
+                            if (googleName.toLowerCase() !== font.name.toLowerCase()) {
+                                // Aliasing via local() is removed as it causes NetworkErrors and unreliable results.
+                                // We now handle matching by adding correct names to the font list.
+                            }
+                        }
+                    } catch (e) {
+                        console.error("[FontFix] Failed to parse Google Font URL for aliasing:", e);
+                    }
                 }
-            `;
+            } else {
+                // It's a direct font file or Data URI
+                css += `
+                    @font-face {
+                        font-family: "${font.name}";
+                        src: url("${font.url}");
+                    }
+                `;
+            }
         });
-        styleTag.textContent = css;
+
+        if (css) {
+            const styleTag = document.createElement("style");
+            styleTag.id = styleId;
+            styleTag.textContent = css;
+            document.head.appendChild(styleTag);
+        }
 
     }, [customFonts]);
 
     useEffect(() => {
+        if (!isLoaded.current) return;
+
         localStorage.setItem("rp-editor-lang", language);
     }, [language]);
 
     useEffect(() => {
+        if (!isLoaded.current) return;
         if (apiKey) localStorage.setItem("rp-editor-api-key", apiKey);
     }, [apiKey]);
 
     useEffect(() => {
+        if (!isLoaded.current) return;
         localStorage.setItem("rp-editor-presets", JSON.stringify(resolutionPresets));
     }, [resolutionPresets]);
 
     useEffect(() => {
+        if (!isLoaded.current) return;
+
         const config = {
             fontSize, lineHeight, fontFamily, fontBold, strokeWidth,
             textBackground, customColors, exportFormat,
@@ -319,6 +368,22 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     };
 
     const addCustomFont = (name: string, url: string) => {
+        const isGoogle = url.includes("fonts.googleapis.com");
+        if (isGoogle) {
+            // Extract all families from the URL (e.g. family=Name1&family=Name2)
+            const familyMatches = [...url.matchAll(/family=([^&:]+)/g)];
+            const families = familyMatches.map(m => decodeURIComponent(m[1].replace(/\+/g, ' ')));
+
+            if (families.length > 0) {
+                const newFonts = families.map(f => ({ name: f, url }));
+                setCustomFonts(prev => {
+                    const existingNames = prev.map(p => p.name);
+                    const filtered = newFonts.filter(nf => !existingNames.includes(nf.name));
+                    return [...prev, ...filtered];
+                });
+                return;
+            }
+        }
         setCustomFonts(prev => [...prev, { name, url }]);
     };
 
@@ -371,7 +436,7 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
             imgbbApiKey, setImgbbApiKey,
             uploadHistory, addToHistory, clearHistory,
             currentView, setCurrentView,
-            exportHandler, setExportHandler
+            setExportHandler, exportImage
         }}>
             {children}
         </EditorContext.Provider>

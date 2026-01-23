@@ -128,7 +128,7 @@ const Workspace = () => {
     };
 
     // --- EXPORT logic ---
-    const generateImageBlob = async (): Promise<Blob | null> => {
+    const generateImageBlob = React.useCallback(async (): Promise<Blob | null> => {
         if (!processedImage && !originalImage) return null;
 
         const canvas = document.createElement("canvas");
@@ -219,14 +219,14 @@ const Workspace = () => {
             // Use maximum quality (1.0) for JPEGs
             canvas.toBlob(resolve, `image/${extension}`, 1.0);
         });
-    };
+    }, [processedImage, originalImage, isCinematic, imgBrightness, imgContrast, imgSaturation, isLinearGradient, textLayers, fontFamily, fontSize, lineHeight, strokeWidth, fontBold, textBackground, exportFormat]);
 
     // Register Handler
     useEffect(() => {
         if (setExportHandler) {
             setExportHandler(generateImageBlob);
         }
-    }, [processedImage, originalImage, textLayers, imgBrightness, imgContrast, imgSaturation, isCinematic, isLinearGradient, exportFormat, setExportHandler]);
+    }, [setExportHandler, generateImageBlob]);
 
     const handleApplyCrop = async () => {
         if (!originalImage || !cropSelection || cropSelection.w < 10 || cropSelection.h < 10) {

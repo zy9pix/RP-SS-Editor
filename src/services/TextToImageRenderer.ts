@@ -44,7 +44,41 @@ export const TextToImageRenderer = {
         measureCanvas.width = maxWidth;
         measureCanvas.height = 10000; // Arbitrary large height for measuring
 
-        const baseFontString = `${fontBold ? "bold " : ""}${fontSize}px ${fontFamily}, sans-serif`;
+        const baseFontString = `${fontBold ? "bold " : ""}${fontSize}px "${fontFamily}", sans-serif`;
+
+        // Wait for font to load before measuring and drawing
+        const standardFonts = ["Arial", "Helvetica", "Times New Roman", "Courier New", "Verdana", "Georgia", "Palatino", "Garamond", "Bookman", "Comic Sans MS", "Trebuchet MS", "Arial Black", "Impact", "sans-serif", "serif", "monospace"];
+
+        if (!standardFonts.includes(fontFamily)) {
+            console.log(`[FontFix] Attempting to load custom font: "${fontFamily}"`);
+            try {
+                // Try loading up to 3 times with a small delay
+                for (let i = 0; i < 3; i++) {
+                    const isAlreadyLoaded = document.fonts.check(`${fontBold ? "bold " : ""}1em "${fontFamily}"`);
+                    if (isAlreadyLoaded) {
+                        console.log(`[FontFix] Font "${fontFamily}" is LOADED.`);
+                        break;
+                    }
+
+                    console.log(`[FontFix] Load attempt ${i + 1} for "${fontFamily}"...`);
+                    await document.fonts.load(`${fontBold ? "bold " : ""}1em "${fontFamily}"`);
+
+                    // Small wait for browser to settle
+                    await new Promise(r => setTimeout(r, 100));
+
+                    if (document.fonts.check(`${fontBold ? "bold " : ""}1em "${fontFamily}"`)) {
+                        console.log(`[FontFix] Font "${fontFamily}" LOADED after attempt ${i + 1}.`);
+                        break;
+                    }
+
+                    if (i === 2) {
+                        console.warn(`[FontFix] Font "${fontFamily}" failed to load after all attempts. Falling back.`);
+                    }
+                }
+            } catch (e) {
+                console.error(`[FontFix] Error during font load for "${fontFamily}":`, e);
+            }
+        }
 
         // Calculate height by "dry running" the draw
         // drawWrappedRichText returns the NEXT Y position, so if we start at 0, the result is total height

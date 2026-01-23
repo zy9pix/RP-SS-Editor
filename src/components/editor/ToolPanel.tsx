@@ -24,7 +24,7 @@ const ToolPanel = () => {
         isLinearGradient, setIsLinearGradient,
         resolutionPresets, setTargetWidth, setTargetHeight,
         imgbbApiKey, addToHistory, customFonts,
-        setCurrentView, exportHandler
+        setCurrentView, exportImage // Changed from exportHandler
     } = useEditor();
 
     const [isAdjustmentsOpen, setIsAdjustmentsOpen] = useState(false);
@@ -42,10 +42,10 @@ const ToolPanel = () => {
     };
 
     const handleExport = async () => {
-        if (!exportHandler) return;
+        if (!exportImage) return;
 
         setIsProcessing(true);
-        const blob = await exportHandler();
+        const blob = await exportImage();
 
         if (blob) {
             const url = URL.createObjectURL(blob);
@@ -78,8 +78,8 @@ const ToolPanel = () => {
         try {
             // Get Image Blob from Workspace via Handler
             let blob: Blob | null = null;
-            if (exportHandler) {
-                blob = await exportHandler();
+            if (exportImage) {
+                blob = await exportImage();
             }
 
             if (!blob) {
