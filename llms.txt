@@ -1,0 +1,34 @@
+# RoleShot (RP-SS-Editor)
+
+RoleShot is a specialized web-based screenshot and chatlog editor for text-based Roleplay (RP) servers, particularly GTA World. It allows users to create cinematic RP screenshots by overlaying chatlogs onto images with advanced parsing, AI filtering, and visual effects.
+
+- Live Version: https://roleshot.hsynadil.com
+- Repository: https://github.com/hsynadil/RP-SS-Editor
+- Discord: https://discord.gg/Mehpr6RY4q
+
+## Tech Stack
+- Frontend: React 19 (Vite)
+- Typescript
+- Styling: Vanilla CSS / Tailwind (where used)
+- AI: Google Gemini AI SDK (@google/genai)
+- Visuals: Lucide React, HTML5 Canvas for image processing
+- Deployment: Vercel
+
+## Key Components
+- `src/components/Editor`: Main workspace for image and text editing.
+- `src/utils/chatParser.ts`: Logic for parsing raw RP logs into structured, color-coded lines.
+- `src/services/gemini.ts`: Integration with Google Gemini for log filtering.
+- `src/components/ImageRenderer.tsx`: Core engine for rendering text overlays and image adjustments onto a canvas.
+
+## Features
+- Drag & Drop / Clipboard support for images.
+- Smart RP chatlog parsing (handles /me, /do, radio, phone, etc.).
+- AI-powered "Magic Filter" using Gemini 1.5 Flash.
+- Cinematic "Cinema Mode" and gradient overlays.
+- One-click upload to ImgBB.
+- Progressive Web App (PWA) support.
+
+## Development
+- `npm run dev`: Start dev server.
+- `npm run build`: Production build.
+- `npm run preview`: Preview production build.

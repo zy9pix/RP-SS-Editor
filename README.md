@@ -1,48 +1,86 @@
 # RoleShot
 
-A specialized web tool for Text-Based Roleplay servers to easily edit screenshots and overlay chatlogs with cinematic quality.
+<div align="center">
 
-## Features
+<!-- ![RoleShot Logo](https://roleshot.hsynadil.com/logo.png)  -->
 
-*   **Drag & Drop / Paste Support**: Simply drag images or text files onto the window, or use CTRL+V to paste content directly.
-*   **Smart Chatlog Parsing**: Automatically colors chat lines based on RP context (Chat, /me, /do, Radio, Phone, etc.).
-*   **Manual Crop & Resize**: Select the action area of your screenshot and automatically resize it to a standard 1000px width for forum consistency.
-*   **Custom Aspect Ratio**: Lock your crop tool to specific dimensions or aspect ratios (defined in Settings) to maintain a consistent look across all your posts.
-*   **AI-Powered Chat Filter**: Uses Google Gemini 2.5 Flash to intelligently clean up chatlogs, removing duplicates, fixing spacing, or filtering specific content based on your instructions.
-*   **Advanced Typography**:
-    *   **Adjustable Outline/Shadow**: Control the thickness of the text outline (using a robust text-shadow method) to ensure readability on any background.
-    *   **Black Background Mode**: Optional "Black Box" mode for text to mimic specific server styles.
-    *   **Custom Fonts**: Choose from classic fonts (Helvetica, Verdana, Georgia, etc.).
-*   **Custom Color Palette**: Define up to 5 custom colors in settings that appear in your quick-access toolbar for easy highlighting.
-*   **Persistence**: Your API Key, styling preferences (colors, fonts, outline), and output settings are saved automatically in your browser.
-*   **Export**: Save your work as PNG, JPG, or WEBP with auto-generated timestamps.
+**The ultimate screenshot editor for Text-Based Roleplay.**
 
-## Setup & Usage
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Live Site](https://img.shields.io/badge/Live-Demo-brightgreen)](https://roleshot.hsynadil.com)
+[![Discord](https://img.shields.io/badge/Discord-Join%20Us-7289DA?logo=discord)](https://discord.gg/Mehpr6RY4q)
 
-This project is built with React and utilizes the Google GenAI SDK.
+[Live App](https://roleshot.hsynadil.com) | [Discord](https://discord.gg/Mehpr6RY4q) | [Features](#features) | [Support](#support)
 
-1.  **Clone the repository**.
-2.  **Install dependencies**:
-    ```bash
-    npm install
-    ```
-3.  **Run the development server**:
-    ```bash
-    npm run dev
-    ```
-4.  **Configure API Key**:
-    *   Click the **Settings (Gear)** icon in the top right corner.
-    *   Enter your **Gemini API Key**. (Get one at [aistudio.google.com](https://aistudio.google.com/)).
-    *   This key is stored locally in your browser.
+</div>
 
-## AI Features
+---
 
-To use the "Magic Filter" button:
-1.  Ensure you have entered your API Key in settings.
-2.  Paste a raw chatlog.
-3.  Click "AI Filter".
-4.  (Optional) Type a command like "Remove OOC" or "Only keep lines from John".
+## 📸 Overview
 
-## License
+RoleShot is a specialized web tool designed for text-based Roleplay (RP) communities. It simplifies the process of creating cinematic screenshots by intelligently parsing chatlogs and providing powerful visual editing tools.
 
-MIT
+---
+
+## ✨ Key Features
+
+### 📝 Advanced Text Processing
+- **Smart Chatlog Parsing**: Automatically handles various timestamp formats and colors lines based on context (/me, /do, Radio, Phone, etc.).
+- **Intelligent Cleaning**: Automatically removes system messages, OOC chat, and metadata to focus on the story.
+- **AI-Powered Filtering**: Integrated with **Google Gemini** for contextual cleanup and advanced log modification.
+- **Fault Detection**: Automatically fixes common log errors, such as merged words or missing spaces.
+
+### 🎨 Cinematic Visual Tools
+- **Precision Cropping**: Freeform or fixed aspect ratios (1:1, 16:9, etc.) for consistent forum posts.
+- **Cinema Mode**: Add cinematic black bars (letterbox) with a single click.
+- **Gradient Overlays**: Enhance text readability with subtle, adjustable gradient backgrounds.
+- **Visual Adjustments**: Fine-tune brightness, contrast, and saturation.
+
+### 🛠️ Personalization & Workflow
+- **Custom Typography**: Support for classic RP fonts, adjustable outlines, and shadow thickness.
+- **Direct Import**: Drag & Drop support and Clipboard (`Ctrl+V`) pasting.
+- **Cloud Hosting Integration**: One-click upload to **ImgBB** for instant sharing.
+- **PWA Ready**: Install RoleShot as a desktop or mobile app for offline-ready access.
+
+---
+
+## 🚀 Getting Started
+
+No installation required! Simply visit the live version to start editing:
+
+**👉 [roleshot.hsynadil.com](https://roleshot.hsynadil.com)**
+
+### Quick Usage:
+1.  **Drop** your screenshot into the editor.
+2.  **Paste** your chatlog into the text box.
+3.  **Refine** using the AI Filter or manual editing tools.
+4.  **Export** or **Upload** directly to ImgBB.
+
+---
+
+## 🤖 AI Integration
+
+To use the advanced **Magic Filter**:
+1.  Open **Settings** (Gear icon).
+2.  Enter your **Google Gemini API Key**.
+3.  Use commands like *"Only keep John Doe's lines"*.
+
+---
+
+## 🤝 Community & Support
+
+Join our Discord community to report bugs, suggest features, or share your work:
+
+**[Join the My Discord](https://discord.gg/Mehpr6RY4q)**
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
+<div align="center">
+Built with AI for the RP Community.
+</div>

@@ -13,6 +13,7 @@ dev-dist
 dist-ssr
 Chatlogs
 *.local
+.agent
 
 # Editor directories and files
 .vscode/*

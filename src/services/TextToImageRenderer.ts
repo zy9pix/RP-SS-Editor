@@ -13,9 +13,13 @@ interface RenderOptions {
 
 export const TextToImageRenderer = {
     /**
-     * Renders a chat log text into a PNG Data URL.
-     * This ensures that the text matches exactly what is seen in preview when exported,
-     * as the layer itself becomes an image.
+     * Renders multiple lines of chat log text into a high-quality PNG Data URL.
+     * This utility creates a specialized canvas for the text layer, handles font loading,
+     * and performs two passes (measurement and rendering) to ensure perfect output.
+     * 
+     * @param text - The chat log text (raw or partially cleaned).
+     * @param options - Configuration for rendering (font family, size, colors, etc.).
+     * @returns A promise resolving to the data URL and dimensions of the generated layer.
      */
     generateLayerImage: async (text: string, options: RenderOptions): Promise<{ dataUrl: string; width: number; height: number }> => {
         const {

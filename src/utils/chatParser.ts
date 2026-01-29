@@ -8,7 +8,9 @@ export interface ChatLine {
 
 /**
  * Cleans the raw chat log based on strict RP server rules (Strict Mode).
- * Refined with real data from "14.DEC.2025" log.
+ * Removes timestamps, system messages, and OOC content while preserving In-Character dialogue and actions.
+ * @param rawText - The raw chat log string from the server.
+ * @returns A cleaned string containing only relevant RP lines.
  */
 export const cleanChatLog = (rawText: string): string => {
     const lines = rawText.split('\n').map(l => l.replace(/^\[\d{2}:\d{2}:\d{2}\]\s*/, ""));
@@ -143,6 +145,12 @@ export const cleanChatLog = (rawText: string): string => {
     return cleanedLines.join('\n');
 };
 
+/**
+ * Parses a cleaned chat log string into structured ChatLine objects.
+ * Assigns appropriate colors based on line content (e.g., actions, radio, phone).
+ * @param text - The cleaned chat log text.
+ * @returns An array of ChatLine objects ready for rendering.
+ */
 export const parseChatLog = (text: string): ChatLine[] => {
     const lines = text.split("\n").filter((l) => l.trim() !== "");
     return lines.map((line, idx) => {
